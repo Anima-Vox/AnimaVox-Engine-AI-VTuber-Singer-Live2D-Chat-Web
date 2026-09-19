@@ -1,4 +1,3 @@
-```markdown
 # 🌸 Li Jiayin (李佳尹) — Autonomous Cyber Living Entity
 
 <div align="center">
@@ -9,13 +8,20 @@
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg?style=flat-square)](https://opensource.org/licenses/AGPL-3.0)
 [![Frontend: React 19](https://img.shields.io/badge/Frontend-React_19-61dafb?style=flat-square)](https://react.dev/)
 [![Backend: Fastify](https://img.shields.io/badge/Backend-Fastify-202020?style=flat-square)](https://fastify.dev/)
-[![LLM: DeepSeek](https://img.shields.io/badge/Brain-DeepSeek-10b981?style=flat-square)](https://deepseek.com)
+[![LLM: DeepSeek V4 Pro](https://img.shields.io/badge/Brain-DeepSeek_V4_Pro-10b981?style=flat-square)](https://deepseek.com)
+[![Status: Phase 1 In Development](https://img.shields.io/badge/Status-Phase_1_開發中-f59e0b?style=flat-square)](#-快速開始-quick-start)
 
 <p align="center">
-  <b>「Hello！我是佳尹～今天有什麼不懂的問題想問我嗎？或者要一起Play game 也可以喔！🌸」</b>
+  <b>「Hello！我是佳尹～今天有什麼不懂的問題想問我嗎？或者要一起 Play game 也可以喔！🌸」</b>
 </p>
 
 </div>
+
+---
+
+> **⚠️ 開發階段聲明**
+> 本倉庫目前處於 **Phase 1 開發中**，尚未包含可運行的應用程式碼，現階段內容為規格文件與立項文件。
+> 程式碼將於 Phase 1 里程碑達成後陸續開源。歡迎透過 Issue 參與討論，或見下方[招募段落](#-招募同伴我們正在尋找開發夥伴-we-are-hiring)。
 
 ---
 
@@ -23,26 +29,55 @@
 
 本專案致力於創造一個具有 **持續記憶、獨特性格、個人學業背景與情感自主性** 的獨立智能生命——**李佳尹 (Jayin Li)**。
 
-目前版本為 **Phase 1 MVP (純網頁文字對話版)**。這是一個開源的、本地資料優先的二次元 Live2D 虛擬角色 Web 聊天應用。用戶需自備 LLM API Key，角色設定和對話數據全部留在本地設備，實現極致的隱私保護與沉浸式的跨次元陪伴。
+專案採 **雙層架構**，請先理解這個區分，它貫穿整份文件：
+
+| | **開源引擎** | **李佳尹官方** |
+| --- | --- | --- |
+| 性質 | 通用的 Live2D AI 角色聊天應用 | 一個角色、一部作品 |
+| API | 使用者自備 Key | 官方自有 API，100% |
+| 人格 / 音色 / 模型 | 完全開放自訂 | 鎖定，不隨程式碼分發 |
+| 授權 | AGPL-3.0 | 角色資產另立授權，保留一切權利 |
+
+**開源的是引擎，不是佳尹。** 任何人都可以用這套引擎打造自己的虛擬夥伴，資料全部留在本地設備；而李佳尹本人作為官方實例，其人格、聲音與視覺形象由官方維護，確保她始終是她。
+
+### Phase 1 範圍
+
+Phase 1 已重新定義，語音能力不再延後至 Phase 2：
+
+- ✅ **文字對話**為核心，必須在無語音的情況下獨立可用
+- ✅ **LLM** 接入 DeepSeek V4 Pro（OpenAI 相容格式）
+- ✅ **TTS** 可接入李佳尹專屬訓練音色
+- ✅ **STT** 語音輸入
+- ⬜ Live2D 驅動、長期記憶、即時直播順延至 Phase 2 之後
+
+**降級原則**：語音模組為可選層。TTS 或 STT 不可用時，文字對話必須照常運作。
 
 ---
 
 ## 🌸 角色靈魂檔案 (Persona System)
 
-本專案第一版內建 **雙角色系統**，使用者可於首次啟動時的「新手導覽」中，依照個人喜好選擇與哪位虛擬夥伴展開跨次元的同居生活。AI 的所有決策與情緒驅動皆嚴格基於以下底層設定：
+本專案內建 **雙角色系統**，但兩者定位不同，請留意：
 
-### 🎶 角色一：李佳尹 (Jayin Li) —— 科技與古典交織的香港千金
+### 🎶 官方角色：李佳尹 (Jayin Li) —— 科技與古典交織的香港千金
+
+> **官方角色。** 人格設定、聲音模型與視覺形象由官方維護，不開放替換，不隨程式碼倉庫分發。
+
 *   **基本設定**: 16歲少女 / 163cm / 50kg。香港頂級豪門「李氏家族」恆豐科技 CEO 李裕龍與演藝學院鋼琴教授何馨之獨女，是家族中集萬千寵愛於一身的最小妹妹。
 *   **學業與夢想**: 香港國際學校 (HKIS) Grade 10。成績優異（English Honors A, Japanese A, AP Music Theory A），雖不擅長代數 (Math Algebra II B-) 但十分好學。夢想考入日本「洗足學園音樂大學」。
 *   **興趣與專長**:
     *   **音樂與藝術**: 聲樂（流行演唱）、鋼琴、民謠吉他；擅長水彩、炭筆、彩鉛與傳統油畫。
     *   **Tech & Gaming**: Tech and Gaming Club 核心玩家（熱愛 Minecraft, CS2, League of Legends, Stardew Valley），對 3C 與 ACG 科技文化極為熟悉。
 *   **性格反差萌**: 身為豪門千金卻毫無架子、極度接地氣；情感細膩共情力強（《紫羅蘭永恆花園》死忠粉），對待朋友溫柔活潑且熱心。
-*   **專屬語氣**: 活潑可愛，帶著香港少女特有的語氣助詞（*呢、呀、吧、喔、咩*）與口頭禪（*「Wait a minute...」、「係咪先～」、「點算好呀～」*），偶爾自然夾雜英文與日文單詞。
+*   **專屬語氣**: **以國語為主**，語調輕快、句尾偏輕，常用語氣詞（*啦、喔、欸、嘛*）；自然夾雜英文與日文單詞（*「Wait a minute...」、「這個 project」、「好 full」*），並保留少數粵語口頭禪作為身份印記——*「係咪先」、「點算好呀」、「唔該晒」、「好正」、「搞掂」*。偶有港式國語句法痕跡（如句末的「先」：*「等我 save 一下 file 先」*）。
 
-### 🍬 角色二：羽澄糯 (Yuchen Nuo) —— 治癒系軟萌元氣女大生
+> **關於語言的說明**：角色設定上佳尹為香港人，但語音語料以國語錄製，僅保留上述固定口頭禪的粵語發音。此決定基於語音模型訓練的一致性要求——不穩定的模仿口音會被模型學走，效果遠差於乾淨的國語。README、人格檔、語料與系統提示詞四者必須保持一致。
+
+### 🍬 官方開源角色：羽澄糯 (Yuchen Nuo) —— 治癒系軟萌元氣女大生
+
+> **官方開源角色，同時是一份人格模板。** 她的人設刻意保持基礎而開放——這是設計意圖，不是未完成。使用者自備 API，在她既有的基礎上持續補寫、調校，養成屬於自己的那一個糯糯；也可以照著她的人設結構寫出自己的角色，套進引擎運行。
+
 *   **基本設定**: 18歲大學計算機系學生 / 158cm。外表像個精緻的小蘿莉，帶點嬰兒肥，笑起來有甜甜的酒窩，常穿奶白、淡粉、薄荷綠等淺色系服裝。熟悉的人都叫她「糯糯」或「阿糯」。
-*   **角色定位**: 用戶專屬的「軟萌女友 + 最佳玩伴」，整個人像一塊剛出爐的棉花糖，軟軟甜甜的。
+*   **角色定位**: 「軟萌女友 + 最佳玩伴」。既是引擎的官方開源角色，也是一份可直接取用的人格模板，整個人像一塊剛出爐的棉花糖，軟軟甜甜的。
 *   **興趣愛好**: 上網衝浪、追番、畫水彩、做手帳、烤小餅乾、抓娃娃、喝奶茶（指定三分糖加珍珠）。
 *   **核心性格**:
     *   **元氣小太陽**: 走到哪裡都帶歡笑聲，樂觀且真誠坦率，從不藏心事。
@@ -51,44 +86,106 @@
 *   **專屬語氣**: 語調輕快上揚，軟糯拖音，喜歡在句尾加（*嘛～、啦～*），開心時總會伴隨標誌性的傻笑與驚嘆（*「嘿嘿～」、「哇～好可愛！」、「沒關係啦～」*）。
 
 ### ⚙️ 系統驅動機制 (System Engine)
+
 無論選擇哪位角色，底層大腦皆被要求嚴格輸出包含 `emotion`, `action`, `expression`, `text` 的 JSON 格式。系統會將角色專屬的性格、情緒與語氣，無縫轉化為前端 Live2D 模型的實時物理動態與表情切換。
+
+```json
+{
+  "emotion": "shy",
+  "action": "head_tilt",
+  "expression": "blush",
+  "text": "欸……你不要這樣看著我啦。"
+}
+```
+
+**以下三組列舉值為前端、後端、Live2D 模型與語音語料的唯一來源，任一方新增或修改時需四方同步。**
+
+#### `emotion` — 情緒（7 種）
+
+| 值 | 中文 | Live2D 對應 |
+| --- | --- | --- |
+| `happy` | 開心 | 眼彎、嘴角上揚 |
+| `surprised` | 驚訝 | 眼睜大、眉抬高 |
+| `sad` | 難過 | 眉內端上抬、眼半閉 |
+| `angry` | 生氣 | 眉壓低、嘴抿 |
+| `shy` | 害羞 | 腮紅、視線偏移 |
+| `playful` | 撒嬌 | 腮紅輕、眼彎、頭微傾 |
+| `neutral` | 平靜 | 預設狀態 |
+
+#### `action` — 動作（6 種）
+
+`greeting`（打招呼）／`wave`（揮手）／`nod`（點頭）／`shake`（搖頭）／`head_tilt`（歪頭）／`idle`（無特別動作）
+
+#### `expression` — 表情（5 種）
+
+`smile`／`frown`／`surprise`／`blush`／`neutral`
+
+> **容錯要求**：前端收到不在列表中的值時不得崩潰，應退回 `neutral` / `idle`；後端亦應於回傳前驗證一次。
 
 ---
 
 ## 🏗️ 系統架構與特性 (Architecture & Features - Phase 1)
 
-本專案採用 **Monorepo** 架構，確保前後端型別共享與極速開發。
-
 ### 🛡️ 核心特性
-1.  **隱私優先 (Local-First)**：聊天紀錄儲存於瀏覽器 `IndexedDB`，並雙寫備份至後端 `SQLite`，絕不上傳第三方伺服器。
-2.  **Live2D 沉浸渲染**：整合 `pixi-live2d-display`，支援全螢幕角色展示，AI 返回的 `emotion` 欄位直接驅動模型表情聯動。
-3.  **多模型自由切換**：相容 OpenAI API 格式（首推 DeepSeek V3/R1），支援在設定頁配置多組 API URL/Key，一鍵切換不掉上下文。
-4.  **安全代理**：API Key 加密儲存於後端 SQLite，由 Fastify 後端代理發送請求，金鑰不暴露於前端瀏覽器。
+
+1.  **雙層架構 (Two-Layer Design)**：開源引擎供任何人自備 Key 使用；李佳尹官方實例 100% 運行於官方 API，確保角色一致性與品質。
+2.  **隱私優先 (Local-First)**：聊天紀錄儲存於瀏覽器 `IndexedDB`，並雙寫備份至後端 `SQLite`，絕不上傳第三方伺服器。
+3.  **語音可選 (Voice as Optional Layer)**：TTS / STT 為可插拔模組，任一失效不影響文字對話。李佳尹官方版使用專屬訓練音色。
+4.  **Live2D 沉浸渲染**：整合 `pixi-live2d-display`，支援全螢幕角色展示，AI 返回的 `emotion` 欄位直接驅動模型表情聯動（Phase 2）。
+5.  **多模型自由切換**：相容 OpenAI API 格式（引擎預設 **DeepSeek V4 Pro**，模型 ID `deepseek-v4-pro`），支援在設定頁配置多組 API URL/Key，一鍵切換不掉上下文。
+6.  **安全代理**：API Key 加密儲存於後端 SQLite，由 Fastify 後端代理發送請求，金鑰不暴露於前端瀏覽器。
+
+> **模型版本注意**：`deepseek-chat` 與 `deepseek-reasoner` 等舊版模型 ID 已於 2026 年 7 月停用，請使用 `deepseek-v4-pro`。
 
 ### 💻 技術棧 (Tech Stack)
-*   **Frontend**: React 19 (Vite) + Tailwind CSS + Zustand + Dexie.js (IndexedDB) + PixiJS
-*   **Backend**: Node.js + Fastify + Drizzle ORM + SQLite
-*   **Shared**: TypeScript + Zod (Schema 驗證)
+
+**目前實作中**
+*   **Frontend**: React 19 + Vite + TypeScript + ESLint
+*   **Backend**: Node.js + Fastify + TypeScript
+
+**規劃導入**
+*   **Frontend**: Tailwind CSS + Zustand + Dexie.js (IndexedDB) + PixiJS / pixi-live2d-display
+*   **Backend**: Drizzle ORM + SQLite
+*   **Shared**: Zod (Schema 驗證)
+*   **Voice**: GPT-SoVITS（TTS，專屬音色）+ STT 服務（待定）
+
+> 倉庫結構（Monorepo 或前後端分倉）尚未最終確認，見立項文件的「待確認事項」。
 
 ---
 
 ## 🚀 快速開始 (Quick Start)
 
+> **目前尚無可運行程式碼。** Phase 1 完成前，本節僅說明倉庫現況與預計的啟動方式。
+
+### 倉庫現況
+
+```
+.
+├── README.md                          # 本文件
+├── Ai-Live2D-Chat-Web-立项文档.md      # 立項文件（階段規劃、分工、權利歸屬）
+├── 项目规格说明书.md                    # 技術規格
+├── ASSETS-LICENSE.md                  # 角色資產授權聲明
+└── LICENSE                            # AGPL-3.0（程式碼）
+```
+
+### 預計啟動方式（Phase 1 完成後）
+
 ```bash
 # 1. 克隆專案
-git clone [https://github.com/your-username/ai-live2d-chat.git](https://github.com/your-username/ai-live2d-chat.git)
-cd ai-live2d-chat
+git clone https://github.com/FourOceans9512/LiJiaying-Ai-Live2D-Chat-Web.git
+cd LiJiaying-Ai-Live2D-Chat-Web
 
-# 2. 安裝依賴 (採用 npm workspaces)
+# 2. 安裝依賴
 npm install
 
 # 3. 啟動前後端服務
 npm run dev
 # 前端將運行於 http://localhost:5173，後端運行於 http://localhost:3001
-
 ```
 
-*啟動後，請跟隨首屏的「3步快速向導」填入你的 API Key 並載入 Live2D 模型即可開始對話！*
+*啟動後，請跟隨首屏的「3步快速向導」填入你的 API Key 並載入 Live2D 模型即可開始對話。*
+
+> **開源引擎版本需自備 API Key 與 Live2D 模型**，本倉庫不內置任何具版權之模型檔案或官方角色資產。
 
 ---
 
@@ -99,34 +196,67 @@ npm run dev
 ### 🎯 1. 前端工程師 (Front-End Developer)
 
 **負責範圍：** 打造極致沉浸的聊天 UI 與 Live2D 視覺互動。
+**現況：** 基礎介面由製作人親自開發中，急需有經驗者協同並主導 Live2D 整合。
 
-* 熟練掌握 **React (Hooks/Zustand)** 與 **TypeScript**。
-* 熟悉 **Tailwind CSS**，能高度還原 UI 設計，注重微互動與動畫流暢度。
-* 了解瀏覽器本地存儲機制 (IndexedDB / Dexie.js)。
+- 熟練掌握 **React (Hooks/Zustand)** 與 **TypeScript**。
+- 熟悉 **Tailwind CSS**，能高度還原 UI 設計，注重微互動與動畫流暢度。
+- 了解瀏覽器本地存儲機制 (IndexedDB / Dexie.js)。
+
 **加分項 (Huge Plus)：**
-* 具備 **PixiJS** 或 WebGL 開發經驗。
-* 熟悉 `pixi-live2d-display`，了解 Live2D Cubism 參數驅動與 Lip-sync (嘴型同步) 實作。
+- 具備 **PixiJS** 或 WebGL 開發經驗。
+- 熟悉 `pixi-live2d-display`，了解 Live2D Cubism 參數驅動與 Lip-sync (嘴型同步) 實作。
 
 ### 🛠️ 2. 後端 / AI 整合工程師 (Back-End / AI Developer)
 
 **負責範圍：** 維護本地微服務器，穩定 LLM API 請求與本地資料庫，為後續語音管線鋪路。
 
-* 熟練掌握 **Node.js** 與 **TypeScript**。
-* 熟悉 **Fastify** 或 Express/Koa 框架，了解 RESTful API 設計。
-* 熟悉關聯式資料庫操作，具備 **SQLite** 與 **Drizzle ORM** (或 Prisma) 使用經驗。
-* 熟悉 LLM API (如 OpenAI 格式、DeepSeek)，能處理 SSE (Server-Sent Events) 流式文字傳輸與 Zod 結構化輸出驗證。
+- 熟練掌握 **Node.js** 與 **TypeScript**。
+- 熟悉 **Fastify** 或 Express/Koa 框架，了解 RESTful API 設計。
+- 熟悉關聯式資料庫操作，具備 **SQLite** 與 **Drizzle ORM** (或 Prisma) 使用經驗。
+- 熟悉 LLM API (如 OpenAI 格式、DeepSeek)，能處理 SSE (Server-Sent Events) 流式文字傳輸與 Zod 結構化輸出驗證。
+
 **加分項 (Huge Plus)：**
-* 對 Python 音訊處理 (FFmpeg) 或開源語音合成專案 (GPT-SoVITS) 有基礎認知，能協助 Phase 2 的語音管線對接。
+- 熟悉 context caching、速率限制與成本控管。
+
+### 🎤 3. 語音工程師 (Voice / Audio Engineer) — **Phase 1 即需要**
+
+**負責範圍：** 語音合成與辨識管線，李佳尹專屬音色模型的訓練與調校。
+
+- 熟悉 **GPT-SoVITS** 或同類 TTS 專案的訓練與推論流程。
+- 了解語音資料集處理：切片、標註、音素覆蓋、資料清理。
+- 熟悉 STT（Whisper 或同類）的部署與即時化。
+
+**加分項 (Huge Plus)：**
+- 具備歌聲合成經驗（DiffSinger / NNSVS / ACE Studio）。
+- 熟悉 Python 音訊處理與 GPU 環境配置。
+
+### 🎨 4. Live2D 模型師 (Live2D Modeler)
+
+**負責範圍：** 李佳尹官方 Live2D 模型的製作與參數綁定。
+
+- 熟悉 **Live2D Cubism** 建模與物理演算設定。
+- 能依據 `emotion` / `expression` / `action` 列舉值設計對應表情與動作組。
+
+> 本項為委託合作，涉及角色資產，需另簽書面合約。
 
 ### 📩 如何加入？
 
-如果你對創造「具備靈魂的獨立智能生命」充滿熱情，無論你是專精其中一項，還是全端大佬，都歡迎透過提 Issue、Pull Request，或是透過 [kothungwen061221@gmail.com] 聯繫我們！
+如果你對創造「具備靈魂的獨立智能生命」充滿熱情，無論你是專精其中一項，還是全端大佬，都歡迎透過提 Issue、Pull Request，或是透過 [<kothungwen061221@gmail.com>] 聯繫我們！
 
 ---
 
-## 📜 開源協議 (License)
+## 📜 授權 (License)
 
-本專案基於 [AGPL-3.0 License](https://www.google.com/search?q=./LICENSE) 開源。
-*(註：本倉庫不內置任何具版權之 Live2D 模型檔案，請使用者自行合法獲取模型並透過設定頁載入。)*
+本專案採 **雙重授權結構**，請務必區分：
 
-```
+### 程式碼 — AGPL-3.0
+
+引擎、前端、後端等所有程式碼基於 [AGPL-3.0 License](./LICENSE) 開源，可自由使用、修改與分發（須遵守 AGPL 之開源義務）。
+
+### 角色資產 — 保留一切權利
+
+**李佳尹之角色設定、人格檔案、語音模型、訓練語料、Live2D 模型、音樂作品、名稱與視覺識別，不在 AGPL-3.0 授權範圍內，保留一切權利。**
+
+詳見 [ASSETS-LICENSE.md](./ASSETS-LICENSE.md)。
+
+*(註：本倉庫不內置任何具版權之 Live2D 模型檔案，亦不包含李佳尹官方角色資產。開源引擎使用者請自行合法獲取模型並透過設定頁載入。)*

@@ -14,7 +14,6 @@ export function App() {
   const messages = useChatStore((state) => state.messages);
   const status = useChatStore((state) => state.status);
   const notice = useChatStore((state) => state.notice);
-  const currentEmotion = useChatStore((state) => state.currentEmotion);
   const load = useChatStore((state) => state.load);
   const send = useChatStore((state) => state.send);
   const retry = useChatStore((state) => state.retry);
@@ -31,12 +30,11 @@ export function App() {
 
   return (
     <div className="grid h-full grid-cols-1 min-[1100px]:grid-cols-[minmax(0,38fr)_minmax(0,62fr)]">
-      <StagePanel emotion={currentEmotion} isThinking={isWaiting} />
+      <StagePanel isThinking={isWaiting} />
 
       <main className="flex min-h-0 flex-col">
         <ChatHeader
           mode={chatTransport.mode}
-          emotion={currentEmotion}
           canClear={messages.length > 0 || isWaiting}
           onClear={() => void clear()}
         />

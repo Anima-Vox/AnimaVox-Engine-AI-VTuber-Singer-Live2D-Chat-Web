@@ -12,9 +12,9 @@ export const CHARACTER = {
   /** 英文名（刻意不用标准拼音） */
   englishName: 'Jayin Li',
   /** 头像里显示的单字（立绘完成前的占位） */
-  monogram: '佳',
+  monogram: '尹',
   /** 空对话时显示的第一句话 */
   greeting: '嗨，我是佳尹。今天想聊点什么？',
   /** 空对话时的建议话题，点一下就会直接发送 */
-  suggestions: ['最近在忙什么？', '给我推荐一首歌吧', '你们社团平时做什么？'],
+  suggestions: ['最近在忙什么？', '给我推荐一首歌吧', '你有在玩什么游戏呀？'],
 } as const;

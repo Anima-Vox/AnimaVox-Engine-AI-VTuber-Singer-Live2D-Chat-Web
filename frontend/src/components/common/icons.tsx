@@ -63,6 +63,15 @@ export function PlusIcon(props: IconProps) {
   );
 }
 
+/** 下拉选单的箭头 */
+export function ChevronDownIcon(props: IconProps) {
+  return (
+    <StrokeIcon strokeWidth={2} {...props}>
+      <path d="m6 9 6 6 6-6" />
+    </StrokeIcon>
+  );
+}
+
 /** 对话 */
 export function ChatIcon(props: IconProps) {
   return (

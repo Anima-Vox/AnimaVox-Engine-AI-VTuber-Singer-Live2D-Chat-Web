@@ -89,11 +89,11 @@ test('官方角色的人设与 API 显示为锁定', async ({ page }) => {
 test('界面可以切换成繁体与英文，角色台词不变，刷新后仍记得', async ({ page }) => {
   await page.getByRole('button', { name: '设置' }).click();
 
-  await page.getByRole('button', { name: '繁體中文' }).click();
+  await page.getByRole('combobox', { name: '界面语言' }).selectOption('zh-TW');
   await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW');
   await expect(page.getByRole('button', { name: '設置' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'English' }).click();
+  await page.getByRole('combobox', { name: '界面語言' }).selectOption('en');
   await expect(page.getByRole('textbox', { name: 'Message input' })).toBeVisible();
   await expect(page.getByText('嗨，我是佳尹。今天想聊点什么？')).toBeVisible();
 

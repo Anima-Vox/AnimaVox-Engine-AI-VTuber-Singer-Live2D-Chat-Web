@@ -1,6 +1,5 @@
 import type { CharacterProfile } from '../../config/characters';
 import { useT } from '../../i18n';
-import { Avatar } from '../common/Avatar';
 
 interface EmptyStateProps {
   character: CharacterProfile;
@@ -13,7 +12,6 @@ export function EmptyState({ character, onPick, disabled }: EmptyStateProps) {
   const t = useT().chat;
   return (
     <div className="flex flex-1 flex-col items-center justify-center pb-[8vh] pt-12 text-center">
-      <Avatar character={character} size="lg" />
       <p className="mt-7 font-voice text-[2.1rem] leading-snug text-ink">{character.greeting}</p>
       <ul className="mt-9 flex flex-wrap justify-center gap-3" aria-label={t.starters}>
         {character.suggestions.map((suggestion) => (

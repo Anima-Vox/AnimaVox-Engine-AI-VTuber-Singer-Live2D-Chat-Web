@@ -72,6 +72,15 @@ export function ChevronDownIcon(props: IconProps) {
   );
 }
 
+/** 下拉选单里的已选标记 */
+export function CheckIcon(props: IconProps) {
+  return (
+    <StrokeIcon strokeWidth={2} {...props}>
+      <path d="m5 12.5 4.5 4.5L19 7.5" />
+    </StrokeIcon>
+  );
+}
+
 /** 对话 */
 export function ChatIcon(props: IconProps) {
   return (

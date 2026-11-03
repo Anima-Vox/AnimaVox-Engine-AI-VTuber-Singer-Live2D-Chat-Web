@@ -19,6 +19,21 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
+/** 在浏览器里读出已保存的界面语言（settings 表） */
+function readSavedLocale(): Promise<string | null> {
+  return new Promise((resolve) => {
+    const request = indexedDB.open('lijiaying-chat');
+    request.onsuccess = () => {
+      const read = request.result.transaction('settings').objectStore('settings').get('locale');
+      read.onsuccess = () => {
+        request.result.close();
+        resolve((read.result as { value?: string } | undefined)?.value ?? null);
+      };
+    };
+    request.onerror = () => resolve(null);
+  });
+}
+
 async function say(page: Page, text: string): Promise<void> {
   const input = page.getByRole('textbox', { name: '消息输入框' });
   await input.fill(text);
@@ -89,14 +104,23 @@ test('官方角色的人设与 API 显示为锁定', async ({ page }) => {
 test('界面可以切换成繁体与英文，角色台词不变，刷新后仍记得', async ({ page }) => {
   await page.getByRole('button', { name: '设置' }).click();
 
-  await page.getByRole('combobox', { name: '界面语言' }).selectOption('zh-TW');
+  await page.getByRole('button', { name: /^界面语言/ }).click();
+  await page.getByRole('option', { name: '繁體中文' }).click();
   await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW');
   await expect(page.getByRole('button', { name: '設置' })).toBeVisible();
 
-  await page.getByRole('combobox', { name: '界面語言' }).selectOption('en');
+  // 键盘也能选：↓ 展开，再 ↓ 移到 English，Enter 选定
+  const trigger = page.getByRole('button', { name: /^界面語言/ });
+  await trigger.focus();
+  await trigger.press('ArrowDown');
+  await expect(page.getByRole('listbox')).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
   await expect(page.getByRole('textbox', { name: 'Message input' })).toBeVisible();
   await expect(page.getByText('嗨，我是佳尹。今天想聊点什么？')).toBeVisible();
 
+  // 等语言设置写进本地数据库后再刷新
+  await expect.poll(() => page.evaluate(readSavedLocale)).toBe('en');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.getByRole('region', { name: 'Chats with Jayin Li' })).toBeVisible();

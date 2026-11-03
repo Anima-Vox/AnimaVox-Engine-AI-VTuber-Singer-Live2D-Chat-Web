@@ -1,46 +1,48 @@
 import { create } from 'zustand';
-import type { ChatContextMessage, KnownEmotion, Message } from '@shared';
+import type { ChatContextMessage, Conversation, Message } from '@shared';
 import { APP_CONFIG } from '../config/app';
-import { CHARACTER } from '../config/character';
 import { db, type ChatDatabase } from '../db';
 import {
   createConversation,
   deleteConversation,
-  getLatestConversation,
+  listConversationsByCharacter,
   renameConversationByFirstMessage,
   touchConversation,
 } from '../db/repositories/conversationRepository';
 import { addMessage, listMessages } from '../db/repositories/messageRepository';
 import { chatTransport, isAbortError, toUserMessage, type ChatTransport } from '../services/chat';
-import { normalizeEmotion } from '../utils/emotion';
 
-/** loading = 正在读取本地记录；ready = 可以发送；waiting = 等佳尹回复 */
+/** loading = 正在读取本地记录；ready = 可以发送；waiting = 等角色回复 */
 export type ChatStatus = 'loading' | 'ready' | 'waiting';
 
-/** 显示在消息列表底部的提示：请求失败或用户主动停止 */
+/** 显示在消息列表底部的提示：请求失败，或最后一条消息还没有回复 */
 export interface ChatNotice {
   kind: 'error' | 'stopped';
   message: string;
 }
 
 export interface ChatState {
+  /** 当前对话的角色 */
+  characterId: string | null;
+  /** 这个角色的全部历史对话（最近的排最前） */
+  conversations: Conversation[];
+  /** null = 还没发出第一句话的新对话 */
   conversationId: string | null;
   messages: Message[];
   status: ChatStatus;
   notice: ChatNotice | null;
-  /** 佳尹当前的情绪（取最后一条回复），舞台区用它显示 emoji */
-  currentEmotion: KnownEmotion;
 
-  /** 启动时读取最近一次会话 */
-  load: () => Promise<void>;
-  /** 发送一条用户消息，并等待回复 */
+  /** 切换到某个角色：读出 TA 的历史对话，并打开最近的一个 */
+  openCharacter: (characterId: string) => Promise<void>;
+  /** 开一个新对话（发出第一句话时才写入本地） */
+  startNewConversation: () => void;
+  selectConversation: (conversationId: string) => Promise<void>;
+  deleteConversation: (conversationId: string) => Promise<void>;
   send: (text: string) => Promise<void>;
-  /** 上一次没有收到回复时，重新请求（不会重复写入用户消息） */
+  /** 最后一条是用户消息时重新请求回复（不会重复写入用户消息） */
   retry: () => Promise<void>;
   /** 停止等待当前回复 */
   stop: () => void;
-  /** 删除当前会话的本地记录，开始新的对话 */
-  clear: () => Promise<void>;
   dismissNotice: () => void;
 }
 
@@ -48,6 +50,8 @@ export interface ChatStoreDeps {
   transport: ChatTransport;
   database: ChatDatabase;
 }
+
+const UNANSWERED: ChatNotice = { kind: 'stopped', message: '这条消息还没有收到回复。' };
 
 /** 只把 user / assistant 的文字发给后端；人格 Prompt 由后端负责拼接 */
 export function buildContext(messages: Message[], windowSize: number): ChatContextMessage[] {
@@ -57,19 +61,38 @@ export function buildContext(messages: Message[], windowSize: number): ChatConte
     .map((message) => ({ role: message.role, content: message.content }));
 }
 
-function lastEmotion(messages: Message[]): KnownEmotion {
-  const lastReply = [...messages].reverse().find((message) => message.role === 'assistant');
-  return normalizeEmotion(lastReply?.emotion);
-}
-
 /** 工厂函数：测试时可以注入假的 transport 与独立的数据库 */
 export function createChatStore({ transport, database }: ChatStoreDeps) {
   let controller: AbortController | null = null;
 
+  function abortPending() {
+    controller?.abort();
+    controller = null;
+  }
+
   return create<ChatState>()((set, get) => {
+    async function refreshConversations(characterId: string): Promise<void> {
+      const conversations = await listConversationsByCharacter(characterId, database);
+      if (get().characterId === characterId) {
+        set({ conversations });
+      }
+    }
+
+    async function showConversation(conversationId: string): Promise<void> {
+      const messages = await listMessages(conversationId, database);
+      if (get().conversationId !== conversationId) {
+        return;
+      }
+      set({
+        messages,
+        status: 'ready',
+        notice: messages.at(-1)?.role === 'user' ? UNANSWERED : null,
+      });
+    }
+
     /** 向后端要一条回复，成功后写入本地并更新界面 */
-    async function requestReply(conversationId: string): Promise<void> {
-      controller?.abort();
+    async function requestReply(characterId: string, conversationId: string): Promise<void> {
+      abortPending();
       const current = new AbortController();
       controller = current;
       set({ status: 'waiting', notice: null });
@@ -78,16 +101,12 @@ export function createChatStore({ transport, database }: ChatStoreDeps) {
         const result = await transport.send(
           {
             conversationId,
+            characterId,
             modelConfigId: APP_CONFIG.modelConfigId,
             messages: buildContext(get().messages, APP_CONFIG.contextWindow),
           },
           { signal: current.signal },
         );
-
-        // 等待期间会话已被清空或切换：丢弃这条迟到的回复
-        if (get().conversationId !== conversationId) {
-          return;
-        }
 
         const { response } = result;
         const reply = await addMessage(
@@ -105,23 +124,22 @@ export function createChatStore({ transport, database }: ChatStoreDeps) {
           database,
         );
         await touchConversation(conversationId, database);
+        await refreshConversations(characterId);
 
-        set({
-          messages: [...get().messages, reply],
-          status: 'ready',
-          currentEmotion: normalizeEmotion(response.emotion),
-        });
-      } catch (error) {
-        if (get().conversationId !== conversationId) {
-          return;
+        // 切换对话或角色时请求会被中断；这里再确认一次，避免迟到的回复显示在别的对话里
+        if (get().conversationId === conversationId) {
+          set({ messages: [...get().messages, reply], status: 'ready' });
         }
-        set({
-          status: 'ready',
-          notice: {
-            kind: isAbortError(error) ? 'stopped' : 'error',
-            message: toUserMessage(error),
-          },
-        });
+      } catch (error) {
+        if (get().conversationId === conversationId) {
+          set({
+            status: 'ready',
+            notice: {
+              kind: isAbortError(error) ? 'stopped' : 'error',
+              message: toUserMessage(error),
+            },
+          });
+        }
       } finally {
         if (controller === current) {
           controller = null;
@@ -130,22 +148,36 @@ export function createChatStore({ transport, database }: ChatStoreDeps) {
     }
 
     return {
+      characterId: null,
+      conversations: [],
       conversationId: null,
       messages: [],
       status: 'loading',
       notice: null,
-      currentEmotion: 'neutral',
 
-      load: async () => {
+      openCharacter: async (characterId) => {
+        abortPending();
+        set({
+          characterId,
+          conversations: [],
+          conversationId: null,
+          messages: [],
+          status: 'loading',
+          notice: null,
+        });
+
         try {
-          const latest = await getLatestConversation(database);
-          const messages = latest ? await listMessages(latest.id, database) : [];
-          set({
-            conversationId: latest?.id ?? null,
-            messages,
-            status: 'ready',
-            currentEmotion: lastEmotion(messages),
-          });
+          const conversations = await listConversationsByCharacter(characterId, database);
+          if (get().characterId !== characterId) {
+            return;
+          }
+          const latest = conversations[0];
+          set({ conversations, conversationId: latest?.id ?? null });
+          if (latest) {
+            await showConversation(latest.id);
+          } else {
+            set({ status: 'ready' });
+          }
         } catch {
           set({
             status: 'ready',
@@ -154,16 +186,42 @@ export function createChatStore({ transport, database }: ChatStoreDeps) {
         }
       },
 
+      startNewConversation: () => {
+        abortPending();
+        set({ conversationId: null, messages: [], status: 'ready', notice: null });
+      },
+
+      selectConversation: async (conversationId) => {
+        if (conversationId === get().conversationId && get().status !== 'loading') {
+          return;
+        }
+        abortPending();
+        set({ conversationId, messages: [], status: 'loading', notice: null });
+        await showConversation(conversationId);
+      },
+
+      deleteConversation: async (conversationId) => {
+        const { characterId } = get();
+        if (conversationId === get().conversationId) {
+          get().startNewConversation();
+        }
+        await deleteConversation(conversationId, database);
+        if (characterId) {
+          await refreshConversations(characterId);
+        }
+      },
+
       send: async (text) => {
         const content = text.trim();
-        if (!content || get().status !== 'ready') {
+        const { characterId, status } = get();
+        if (!content || !characterId || status !== 'ready') {
           return;
         }
 
         let conversationId = get().conversationId;
         if (!conversationId) {
           const conversation = await createConversation(
-            { characterId: CHARACTER.id, activeModelId: APP_CONFIG.modelConfigId },
+            { characterId, activeModelId: APP_CONFIG.modelConfigId },
             database,
           );
           conversationId = conversation.id;
@@ -177,36 +235,24 @@ export function createChatStore({ transport, database }: ChatStoreDeps) {
         if (isFirstUserMessage) {
           await renameConversationByFirstMessage(conversationId, content, database);
         }
+        await refreshConversations(characterId);
 
-        await requestReply(conversationId);
+        await requestReply(characterId, conversationId);
       },
 
       retry: async () => {
-        const { conversationId, messages, status } = get();
-        if (!conversationId || status !== 'ready' || messages.at(-1)?.role !== 'user') {
+        const { characterId, conversationId, messages, status } = get();
+        if (!characterId || !conversationId || status !== 'ready') {
           return;
         }
-        await requestReply(conversationId);
+        if (messages.at(-1)?.role !== 'user') {
+          return;
+        }
+        await requestReply(characterId, conversationId);
       },
 
       stop: () => {
         controller?.abort();
-      },
-
-      clear: async () => {
-        controller?.abort();
-        controller = null;
-        const { conversationId } = get();
-        set({
-          conversationId: null,
-          messages: [],
-          status: 'ready',
-          notice: null,
-          currentEmotion: 'neutral',
-        });
-        if (conversationId) {
-          await deleteConversation(conversationId, database);
-        }
       },
 
       dismissNotice: () => set({ notice: null }),

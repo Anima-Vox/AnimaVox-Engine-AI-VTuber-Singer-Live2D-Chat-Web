@@ -1,11 +1,12 @@
 import clsx from 'clsx';
 import { useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
-import { CHARACTER } from '../../config/character';
 import { SendIcon, StopIcon } from '../common/icons';
 
 const MAX_LENGTH = 2000;
 
 interface ComposerProps {
+  /** 输入框里的提示文字 */
+  placeholder: string;
   isWaiting: boolean;
   disabled: boolean;
   onSend: (text: string) => void;
@@ -13,7 +14,7 @@ interface ComposerProps {
 }
 
 /** 底部输入框：Enter 发送，Shift + Enter 换行；中文输入法选字时按 Enter 不会误发 */
-export function Composer({ isWaiting, disabled, onSend, onStop }: ComposerProps) {
+export function Composer({ placeholder, isWaiting, disabled, onSend, onStop }: ComposerProps) {
   const [draft, setDraft] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const canSend = draft.trim().length > 0 && !isWaiting && !disabled;
@@ -62,7 +63,7 @@ export function Composer({ isWaiting, disabled, onSend, onStop }: ComposerProps)
           disabled={disabled}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={`和${CHARACTER.shortName}说点什么…`}
+          placeholder={placeholder}
           aria-label="消息输入框"
           className="thin-scrollbar max-h-[12rem] min-h-[2.75rem] flex-1 resize-none bg-transparent py-[0.55rem] text-[1rem] leading-[1.7] text-ink outline-none placeholder:text-haze/70"
         />

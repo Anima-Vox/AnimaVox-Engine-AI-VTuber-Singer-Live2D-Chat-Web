@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 /**
  * 文字对话版 E2E（默认的 mock 通道，不需要后端）。
@@ -7,7 +7,7 @@ import { expect, test } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
-  // 每个用例从空对话开始
+  // 每个用例从空白的本地数据开始
   await page.evaluate(
     () =>
       new Promise<void>((resolve) => {
@@ -19,14 +19,18 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
-test('发送消息后收到带情绪 emoji 的回复，刷新后记录还在', async ({ page }) => {
+async function say(page: Page, text: string): Promise<void> {
   const input = page.getByRole('textbox', { name: '消息输入框' });
-  await input.fill('你好');
+  await input.fill(text);
   await input.press('Enter');
+  await expect(page.getByRole('button', { name: '停止等待回复' })).toHaveCount(0, {
+    timeout: 15_000,
+  });
+}
 
-  const reply = page.locator('article[aria-label="佳尹说"]').first();
-  await expect(reply).toBeVisible({ timeout: 15_000 });
-  await expect(reply.getByRole('img', { name: /心情：/ })).toBeVisible();
+test('发送消息后收到回复，刷新后记录还在', async ({ page }) => {
+  await say(page, '你好');
+  await expect(page.locator('article[aria-label="佳尹说"]')).toHaveCount(1);
 
   await page.reload();
   await expect(page.locator('article')).toHaveCount(2);
@@ -38,24 +42,52 @@ test('点建议话题会直接发送', async ({ page }) => {
   await expect(page.locator('article[aria-label="佳尹说"]')).toBeVisible({ timeout: 15_000 });
 });
 
-test('服务器出错时显示提示与重试按钮', async ({ page }) => {
-  const input = page.getByRole('textbox', { name: '消息输入框' });
-  await input.fill('模拟错误');
-  await input.press('Enter');
+test('新对话会出现在历史列表里，可以切回旧对话', async ({ page }) => {
+  await say(page, '第一段对话');
+  await page.getByRole('button', { name: '新对话' }).click();
+  await say(page, '第二段对话');
 
-  await expect(page.getByRole('alert')).toContainText('没有收到回复', { timeout: 15_000 });
-  // 假后端对同一句话永远报错，所以这里只确认重试按钮可用
-  await expect(page.getByRole('button', { name: '重试' })).toBeEnabled();
+  const history = page.getByRole('region', { name: '和佳尹的对话' });
+  await expect(history.getByRole('button', { name: /^第一段对话/ })).toBeVisible();
+  await history.getByRole('button', { name: /^第一段对话/ }).click();
+  await expect(page.locator('article[aria-label="你说"]')).toHaveText(/第一段对话/);
 });
 
-test('清空对话需要连点两次', async ({ page }) => {
-  const input = page.getByRole('textbox', { name: '消息输入框' });
-  await input.fill('你好');
-  await input.press('Enter');
-  await expect(page.locator('article[aria-label="佳尹说"]')).toBeVisible({ timeout: 15_000 });
+test('删除对话需要再确认一次', async ({ page }) => {
+  await say(page, '要删掉的对话');
 
-  await page.getByRole('button', { name: '清空对话' }).click();
-  await expect(page.locator('article')).toHaveCount(2);
-  await page.getByRole('button', { name: '再点一次，清空全部记录' }).click();
+  await page.getByRole('button', { name: '删除对话：要删掉的对话' }).click();
+  await page.getByRole('button', { name: '确认删除' }).click();
+
   await expect(page.locator('article')).toHaveCount(0);
+  await expect(page.getByText('发出第一句话后，对话会保存在这里。')).toBeVisible();
+});
+
+test('切换到阿糯后，对话与展示框都换成阿糯的', async ({ page }) => {
+  await say(page, '你好');
+
+  await page.getByRole('button', { name: '角色' }).click();
+  await page.getByRole('button', { name: /羽澄糯/ }).click();
+
+  await expect(page.getByRole('region', { name: '和阿糯的对话' })).toBeVisible();
+  await expect(page.locator('article')).toHaveCount(0);
+  await say(page, '你好');
+  await expect(page.locator('article[aria-label="阿糯说"]')).toHaveCount(1);
+
+  // 刷新后仍记得上次选的角色
+  await page.reload();
+  await expect(page.getByRole('region', { name: '和阿糯的对话' })).toBeVisible();
+});
+
+test('官方角色的人设与 API 显示为锁定', async ({ page }) => {
+  await page.getByRole('button', { name: '人设' }).click();
+  await expect(page.getByText(/李佳尹是官方角色/)).toBeVisible();
+  await page.getByRole('button', { name: 'API' }).click();
+  await expect(page.getByText(/固定使用官方模型与 API/)).toBeVisible();
+});
+
+test('服务器出错时显示提示与重试按钮', async ({ page }) => {
+  await say(page, '模拟错误');
+  await expect(page.getByRole('alert')).toContainText('没有收到回复');
+  await expect(page.getByRole('button', { name: '重试' })).toBeEnabled();
 });

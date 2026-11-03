@@ -2,7 +2,7 @@ import { ChatResponseSchema, type ChatResponse, type LLMResponse } from '@shared
 import { createId } from '../../utils/id';
 import { nowIso } from '../../utils/time';
 import { ChatTransportError } from './errors';
-import { MOCK_ERROR_TRIGGER, MOCK_FALLBACKS, MOCK_RULES } from './mockReplies';
+import { getMockScript, MOCK_ERROR_TRIGGER } from './mockReplies';
 import type { ChatTransport } from './types';
 
 export interface MockTransportOptions {
@@ -19,13 +19,14 @@ function stableHash(text: string): number {
   return hash;
 }
 
-function pickReply(userText: string): LLMResponse {
-  const rule = MOCK_RULES.find((item) => item.pattern.test(userText));
+function pickReply(characterId: string | undefined, userText: string): LLMResponse {
+  const { rules, fallbacks } = getMockScript(characterId);
+  const rule = rules.find((item) => item.pattern.test(userText));
   if (rule) {
     return structuredClone(rule.reply);
   }
-  const fallback = MOCK_FALLBACKS[stableHash(userText) % MOCK_FALLBACKS.length];
-  return structuredClone(fallback ?? MOCK_FALLBACKS[0]!);
+  const fallback = fallbacks[stableHash(userText) % fallbacks.length] ?? fallbacks[0];
+  return structuredClone(fallback);
 }
 
 /** 句子越长「想」得越久，再加一点随机，读起来更像真人 */
@@ -73,7 +74,7 @@ export function createMockTransport(options: MockTransportOptions = {}): ChatTra
       }
 
       const response: ChatResponse = {
-        response: pickReply(lastUser.content),
+        response: pickReply(request.characterId, lastUser.content),
         conversationId: request.conversationId,
         messageId: createId(),
         createdAt: nowIso(),

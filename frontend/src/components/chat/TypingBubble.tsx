@@ -1,11 +1,11 @@
-import { CHARACTER } from '../../config/character';
+import type { CharacterProfile } from '../../config/characters';
 import { Avatar } from '../common/Avatar';
 
 /** 等待回复时的「正在输入」气泡 */
-export function TypingBubble() {
+export function TypingBubble({ character }: { character: CharacterProfile }) {
   return (
     <div className="flex items-start gap-3.5" role="status">
-      <Avatar />
+      <Avatar character={character} />
       <div className="flex h-[3.15rem] items-center gap-1.5 rounded-[1.15rem] rounded-tl-md border border-mist-deep bg-white px-5">
         {[0, 1, 2].map((index) => (
           <span
@@ -15,7 +15,7 @@ export function TypingBubble() {
             style={{ animationDelay: `${index * 0.16}s` }}
           />
         ))}
-        <span className="sr-only">{CHARACTER.shortName}正在输入</span>
+        <span className="sr-only">{character.shortName}正在输入</span>
       </div>
     </div>
   );

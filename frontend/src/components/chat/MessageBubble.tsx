@@ -1,16 +1,18 @@
 import type { Message } from '@shared';
+import type { CharacterProfile } from '../../config/characters';
 import { formatMessageTime } from '../../utils/time';
 import { Avatar } from '../common/Avatar';
 
 interface MessageBubbleProps {
   message: Message;
+  character: CharacterProfile;
 }
 
 /**
  * 一条消息。
- * 佳尹的回复只显示文字；emotion / action / expression 已保存在记录里，暂不显示。
+ * 角色的回复只显示文字；emotion / action / expression 已保存在记录里，留给 Live2D 使用。
  */
-export function MessageBubble({ message }: MessageBubbleProps) {
+export function MessageBubble({ message, character }: MessageBubbleProps) {
   const time = formatMessageTime(message.createdAt);
 
   if (message.role === 'user') {
@@ -27,8 +29,8 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   }
 
   return (
-    <article aria-label="佳尹说" className="flex items-start gap-3.5">
-      <Avatar />
+    <article aria-label={`${character.shortName}说`} className="flex items-start gap-3.5">
+      <Avatar character={character} />
       <div className="flex min-w-0 max-w-[85%] flex-col items-start">
         <p className="whitespace-pre-wrap break-words rounded-[1.15rem] rounded-tl-md border border-mist-deep bg-white px-5 py-3 font-voice text-[1.08rem] leading-[1.8] text-ink">
           {message.content}

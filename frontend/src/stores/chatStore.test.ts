@@ -17,15 +17,18 @@ afterEach(async () => {
   await database.delete();
 });
 
-/** 第一次失败、之后成功的通道，用来测重试 */
-function flakyTransport(): ChatTransport {
-  const inner = createMockTransport({ delayMs: () => 0 });
-  let calls = 0;
+function instantTransport(): ChatTransport {
+  return createMockTransport({ delayMs: () => 0 });
+}
+
+/** 记下每次请求，并且第一次失败、之后成功 */
+function flakyTransport(requests: ChatRequest[] = []): ChatTransport {
+  const inner = instantTransport();
   return {
     mode: 'mock',
     async send(request: ChatRequest): Promise<ChatResponse> {
-      calls += 1;
-      if (calls === 1) {
+      requests.push(request);
+      if (requests.length === 1) {
         throw new ChatTransportError('network', '连不上服务器，请检查网络或确认后端已经启动。');
       }
       return inner.send(request);
@@ -33,51 +36,86 @@ function flakyTransport(): ChatTransport {
   };
 }
 
+async function openStore(transport: ChatTransport = instantTransport(), characterId = 'lijiaying') {
+  const store = createChatStore({ transport, database });
+  await store.getState().openCharacter(characterId);
+  return store;
+}
+
 describe('chatStore', () => {
-  it('发送后写入用户消息与完整的回复 JSON，并更新当前情绪', async () => {
-    const store = createChatStore({
-      transport: createMockTransport({ delayMs: () => 0 }),
-      database,
-    });
-    await store.getState().load();
+  it('发送后写入用户消息与完整的回复 JSON，并出现在历史对话里', async () => {
+    const store = await openStore();
 
     await store.getState().send('你好');
 
     const state = store.getState();
     expect(state.status).toBe('ready');
     expect(state.messages.map((message) => message.role)).toEqual(['user', 'assistant']);
-
-    const reply = state.messages[1];
-    expect(reply?.emotion).toBe('happy');
-    expect(reply?.action).toBe('greeting');
-    expect(reply?.expression).toBe('smile');
-    expect(state.currentEmotion).toBe('happy');
-
-    const stored = await listMessages(state.conversationId ?? '', database);
-    expect(stored).toHaveLength(2);
+    expect(state.messages[1]?.emotion).toBe('happy');
+    expect(state.messages[1]?.action).toBe('greeting');
+    expect(state.messages[1]?.expression).toBe('smile');
+    expect(state.conversations).toHaveLength(1);
+    expect(state.conversations[0]?.title).toBe('你好');
+    expect(await listMessages(state.conversationId ?? '', database)).toHaveLength(2);
   });
 
-  it('重新载入后恢复上一次的会话', async () => {
-    const first = createChatStore({
-      transport: createMockTransport({ delayMs: () => 0 }),
-      database,
-    });
-    await first.getState().load();
+  it('请求里带上当前角色', async () => {
+    const requests: ChatRequest[] = [];
+    const store = await openStore(flakyTransport(requests), 'yuchengnuo');
+
+    await store.getState().send('在吗');
+
+    expect(requests[0]?.characterId).toBe('yuchengnuo');
+  });
+
+  it('重新打开角色时恢复最近的对话', async () => {
+    const first = await openStore();
     await first.getState().send('你好');
 
-    const second = createChatStore({
-      transport: createMockTransport({ delayMs: () => 0 }),
-      database,
-    });
-    await second.getState().load();
+    const second = await openStore();
 
     expect(second.getState().messages).toHaveLength(2);
-    expect(second.getState().currentEmotion).toBe('happy');
+    expect(second.getState().conversationId).toBe(first.getState().conversationId);
+  });
+
+  it('不同角色的对话互不混在一起', async () => {
+    const store = await openStore();
+    await store.getState().send('你好');
+
+    await store.getState().openCharacter('yuchengnuo');
+
+    expect(store.getState().conversations).toHaveLength(0);
+    expect(store.getState().messages).toHaveLength(0);
+  });
+
+  it('新对话、切换回旧对话', async () => {
+    const store = await openStore();
+    await store.getState().send('第一段');
+    const firstId = store.getState().conversationId ?? '';
+
+    store.getState().startNewConversation();
+    expect(store.getState().conversationId).toBeNull();
+    await store.getState().send('第二段');
+
+    expect(store.getState().conversations).toHaveLength(2);
+    await store.getState().selectConversation(firstId);
+    expect(store.getState().messages[0]?.content).toBe('第一段');
+  });
+
+  it('删除当前对话后回到新对话', async () => {
+    const store = await openStore();
+    await store.getState().send('你好');
+    const conversationId = store.getState().conversationId ?? '';
+
+    await store.getState().deleteConversation(conversationId);
+
+    expect(store.getState().conversationId).toBeNull();
+    expect(store.getState().conversations).toHaveLength(0);
+    expect(await listMessages(conversationId, database)).toHaveLength(0);
   });
 
   it('请求失败时显示提示，重试不会重复写入用户消息', async () => {
-    const store = createChatStore({ transport: flakyTransport(), database });
-    await store.getState().load();
+    const store = await openStore(flakyTransport());
 
     await store.getState().send('在吗');
     expect(store.getState().notice?.kind).toBe('error');
@@ -88,12 +126,8 @@ describe('chatStore', () => {
     expect(store.getState().messages.map((message) => message.role)).toEqual(['user', 'assistant']);
   });
 
-  it('停止等待后显示「已停止」，可以再重试', async () => {
-    const store = createChatStore({
-      transport: createMockTransport({ delayMs: () => 10_000 }),
-      database,
-    });
-    await store.getState().load();
+  it('停止等待后显示「已停止」', async () => {
+    const store = await openStore(createMockTransport({ delayMs: () => 10_000 }));
 
     const pending = store.getState().send('你好');
     await new Promise((resolve) => setTimeout(resolve, 20));
@@ -104,20 +138,13 @@ describe('chatStore', () => {
     expect(store.getState().status).toBe('ready');
   });
 
-  it('清空对话会删除本地记录', async () => {
-    const store = createChatStore({
-      transport: createMockTransport({ delayMs: () => 0 }),
-      database,
-    });
-    await store.getState().load();
-    await store.getState().send('你好');
-    const conversationId = store.getState().conversationId ?? '';
+  it('打开最后一句还没回复的对话时，提示可以重试', async () => {
+    const first = await openStore(flakyTransport());
+    await first.getState().send('在吗');
 
-    await store.getState().clear();
+    const second = await openStore();
 
-    expect(store.getState().messages).toHaveLength(0);
-    expect(store.getState().conversationId).toBeNull();
-    expect(await listMessages(conversationId, database)).toHaveLength(0);
+    expect(second.getState().notice?.kind).toBe('stopped');
   });
 });
 

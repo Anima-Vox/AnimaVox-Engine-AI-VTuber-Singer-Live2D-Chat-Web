@@ -1,19 +1,20 @@
-import { CHARACTER } from '../../config/character';
+import type { CharacterProfile } from '../../config/characters';
 import { Avatar } from '../common/Avatar';
 
 interface EmptyStateProps {
+  character: CharacterProfile;
   onPick: (text: string) => void;
   disabled: boolean;
 }
 
-/** 还没有任何消息时：佳尹先打招呼，并给几个可以直接点的话题 */
-export function EmptyState({ onPick, disabled }: EmptyStateProps) {
+/** 新对话还没有消息时：角色先打招呼，并给几个可以直接点的话题 */
+export function EmptyState({ character, onPick, disabled }: EmptyStateProps) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center pb-[8vh] pt-12 text-center">
-      <Avatar size="lg" />
-      <p className="mt-7 font-voice text-[2.1rem] leading-snug text-ink">{CHARACTER.greeting}</p>
+      <Avatar character={character} size="lg" />
+      <p className="mt-7 font-voice text-[2.1rem] leading-snug text-ink">{character.greeting}</p>
       <ul className="mt-9 flex flex-wrap justify-center gap-3" aria-label="可以这样开始">
-        {CHARACTER.suggestions.map((suggestion) => (
+        {character.suggestions.map((suggestion) => (
           <li key={suggestion}>
             <button
               type="button"

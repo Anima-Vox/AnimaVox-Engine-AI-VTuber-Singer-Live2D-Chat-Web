@@ -10,6 +10,18 @@ export async function listConversations(database: ChatDatabase = db): Promise<Co
   return database.conversations.orderBy('updatedAt').reverse().toArray();
 }
 
+/** 某个角色的全部会话，最近活跃的排最前 */
+export async function listConversationsByCharacter(
+  characterId: string,
+  database: ChatDatabase = db,
+): Promise<Conversation[]> {
+  const conversations = await database.conversations
+    .where('characterId')
+    .equals(characterId)
+    .toArray();
+  return conversations.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
 export async function getConversation(
   id: string,
   database: ChatDatabase = db,

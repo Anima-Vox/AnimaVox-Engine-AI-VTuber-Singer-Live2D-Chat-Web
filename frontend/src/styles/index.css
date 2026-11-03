@@ -40,20 +40,44 @@
 }
 
 @layer components {
-  /* 舞台上的电平表：每根柱子的高度与延迟由 --h / --d 决定 */
-  .meter-bar {
-    --lo: 0.82;
-    --hi: 1;
-    height: calc(var(--h) * 100%);
-    transform-origin: center;
-    animation: meter 3.6s ease-in-out var(--d) infinite;
+  /*
+   * 右侧拱形展示框（造型来自《李佳尹 角色资料介绍》第一页的立绘框）：
+   * 上方半圆、下方小圆角，白 → 蓝 → 深夜蓝的渐变，内圈一道虚线。
+   * 外层 .stage-slot 是尺寸容器，展示框按 2:5 的比例尽量撑满。
+   */
+  .stage-slot {
+    container-type: size;
+    display: grid;
+    place-items: center;
   }
 
-  /* 等待回复时：电平跳得更快、幅度更大，像有人在说话 */
-  .meter[data-state='thinking'] .meter-bar {
-    --lo: 0.28;
-    --hi: 1.08;
-    animation-duration: 0.9s;
+  .stage-frame {
+    --frame-w: min(86cqw, calc(100cqh * 2 / 5));
+    --frame-inset: 0.9rem;
+    --frame-foot: 1.1rem;
+    position: relative;
+    overflow: hidden;
+    width: var(--frame-w);
+    aspect-ratio: 2 / 5;
+    border: 1px solid rgb(61 99 232 / 0.22);
+    border-radius: calc(var(--frame-w) / 2) calc(var(--frame-w) / 2) var(--frame-foot)
+      var(--frame-foot);
+    background:
+      radial-gradient(60% 32% at 50% 30%, rgb(255 255 255 / 0.6), transparent 70%),
+      linear-gradient(180deg, #ffffff 0%, #e6ecfb 26%, #b9c8f4 54%, #5a77d6 80%, #182544 100%);
+    /* 渐变从边框外缘开始画，避免底色在顶部边框下重复出现一道深色线 */
+    background-origin: border-box;
+    background-repeat: no-repeat;
+    box-shadow: 0 2.2rem 3.5rem -2rem rgb(22 33 58 / 0.5);
+  }
+
+  .stage-frame-inner {
+    position: absolute;
+    inset: var(--frame-inset);
+    border: 1px dashed rgb(61 99 232 / 0.35);
+    border-radius: calc(var(--frame-w) / 2 - var(--frame-inset))
+      calc(var(--frame-w) / 2 - var(--frame-inset)) calc(var(--frame-foot) - 0.35rem)
+      calc(var(--frame-foot) - 0.35rem);
   }
 
   .thin-scrollbar {

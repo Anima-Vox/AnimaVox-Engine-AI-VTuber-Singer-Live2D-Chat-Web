@@ -18,7 +18,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // 舞台：夜里的上海、录音室里的调音台
+        // 深色：菜单栏、头像
         night: {
           DEFAULT: '#16213A',
           raised: '#1F2C4C',
@@ -48,27 +48,17 @@ export default {
       },
       fontFamily: {
         sans: SANS,
-        // 佳尹说的话用霞鹜文楷：一眼就能分出是谁在说话
+        // 角色说的话用霞鹜文楷：一眼就能分出是谁在说话
         voice: ['"LXGW WenKai"', ...SANS],
       },
       keyframes: {
-        meter: {
-          '0%, 100%': { transform: 'scaleY(var(--lo))' },
-          '50%': { transform: 'scaleY(var(--hi))' },
-        },
         'dot-bounce': {
           '0%, 80%, 100%': { transform: 'translateY(0)', opacity: '0.35' },
           '40%': { transform: 'translateY(-0.3rem)', opacity: '1' },
         },
-        pop: {
-          '0%': { transform: 'scale(0.6)', opacity: '0' },
-          '70%': { transform: 'scale(1.12)', opacity: '1' },
-          '100%': { transform: 'scale(1)' },
-        },
       },
       animation: {
         'dot-bounce': 'dot-bounce 1.2s ease-in-out infinite',
-        pop: 'pop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) both',
       },
     },
   },

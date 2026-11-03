@@ -31,6 +31,8 @@ export const LLMResponseSchema = z.object({
 /** POST /api/chat 请求体 */
 export const ChatRequestSchema = z.object({
   conversationId: z.string().min(1),
+  /** 与哪个角色对话（后端据此选择人设）；可选，旧版前端不传时由后端决定默认角色 */
+  characterId: z.string().min(1).optional(),
   modelConfigId: z.string().min(1),
   messages: z.array(ChatContextMessageSchema).min(1),
 });

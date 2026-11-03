@@ -16,6 +16,14 @@ AnimaVox（心音）引擎的 Web 前端。这一版只做文字对话：语音�
 
 窄于 1200px 时隐藏展示框；窄于 800px 时只保留菜单栏与对话区。
 
+## 界面语言
+
+「设置」里可以切换 **简体中文 / 繁體中文 / English**，选择会记在本地。
+
+- 只切换界面文字，文字在 `src/i18n/messages/`。
+- 繁體由简体逐字转换（OpenCC s2tw），只换字形、不换用词。
+- 角色的台词、开场白、建议话题、简介（`src/config/characters.ts`）以及聊天内容都不会被转换或翻译。
+
 ## 角色
 
 | 角色   | 类型 | 说明                                                       |
@@ -84,9 +92,11 @@ src/
 │   ├── mockTransport.ts         假后端
 │   ├── mockReplies.ts           假后端台词表（按角色）
 │   └── errors.ts                错误分类与中文提示
+├── i18n/                        界面语言：locales.ts + messages/（zh-CN、zh-TW、en）
 ├── stores/
 │   ├── chatStore.ts             对话：历史列表 / 新对话 / 切换 / 删除 / 发送 / 重试 / 停止
-│   └── characterStore.ts        当前角色（记在本地）
+│   ├── characterStore.ts        当前角色（记在本地）
+│   └── localeStore.ts           界面语言（记在本地）
 ├── db/                          IndexedDB（会话、消息、设置）
 ├── assets/brand/                AnimaVox LOGO（左上角，文字已转曲线）
 └── components/
@@ -107,6 +117,7 @@ src/
 | 换成静态立绘               | `src/config/characters.ts`         | `visual` 改成 `{ kind: 'image', src: '/立绘.png', alt: '…' }`，图片放 `frontend/public/` |
 | 假后端的回复内容           | `src/services/chat/mockReplies.ts` | 每条的文字；`pattern` 是触发关键词          |
 | 展示框的渐变颜色、比例     | `src/styles/index.css`             | `.stage-frame` 的 `background`、`aspect-ratio` |
+| 界面上的按钮、标题、提示文字 | `src/i18n/messages/*.ts`           | 三个语言文件的同一个位置都要改             |
 | 主题颜色                   | `tailwind.config.js`               | `colors` 里的色值                           |
 | 整体字号                   | `src/styles/index.css`             | `html { font-size: clamp(...) }`            |
 | 每次带多少条上下文         | `src/config/app.ts`                | `contextWindow`                             |

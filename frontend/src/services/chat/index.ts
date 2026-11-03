@@ -3,7 +3,7 @@ import { createHttpTransport } from './httpTransport';
 import { createMockTransport } from './mockTransport';
 import type { ChatTransport } from './types';
 
-export { ChatTransportError, isAbortError, toUserMessage } from './errors';
+export { ChatTransportError, isAbortError, type ChatErrorCode } from './errors';
 export type { ChatTransport, SendOptions } from './types';
 
 export function createChatTransport(mode: ChatTransportMode): ChatTransport {

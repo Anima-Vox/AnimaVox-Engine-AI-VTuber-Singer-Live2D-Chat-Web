@@ -13,6 +13,16 @@ const SANS = [
   'sans-serif',
 ];
 
+/** 繁体界面：优先用繁中字体（苹方 TC、微软正黑体），字形符合台湾习惯 */
+const SANS_TC = [
+  '"PingFang TC"',
+  '"Microsoft JhengHei UI"',
+  '"Microsoft JhengHei"',
+  '"Noto Sans TC"',
+  '"Noto Sans CJK TC"',
+  ...SANS,
+];
+
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
@@ -48,6 +58,7 @@ export default {
       },
       fontFamily: {
         sans: SANS,
+        'sans-tc': SANS_TC,
         // 角色说的话用霞鹜文楷：一眼就能分出是谁在说话
         voice: ['"LXGW WenKai"', ...SANS],
       },

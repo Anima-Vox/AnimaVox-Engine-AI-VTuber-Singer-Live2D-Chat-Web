@@ -10,15 +10,27 @@ import {
   touchConversation,
 } from '../db/repositories/conversationRepository';
 import { addMessage, listMessages } from '../db/repositories/messageRepository';
-import { chatTransport, isAbortError, toUserMessage, type ChatTransport } from '../services/chat';
+import {
+  chatTransport,
+  ChatTransportError,
+  isAbortError,
+  type ChatErrorCode,
+  type ChatTransport,
+} from '../services/chat';
 
 /** loading = 正在读取本地记录；ready = 可以发送；waiting = 等角色回复 */
 export type ChatStatus = 'loading' | 'ready' | 'waiting';
 
+/** 提示的原因；对应的文字在 src/i18n 里按界面语言显示 */
+export type NoticeReason = ChatErrorCode | 'unanswered' | 'history';
+
 /** 显示在消息列表底部的提示：请求失败，或最后一条消息还没有回复 */
 export interface ChatNotice {
   kind: 'error' | 'stopped';
-  message: string;
+  reason: NoticeReason;
+  /** 后端返回的 HTTP 状态码与原话（reason 为 http 时） */
+  status?: number | undefined;
+  detail?: string | undefined;
 }
 
 export interface ChatState {
@@ -51,7 +63,17 @@ export interface ChatStoreDeps {
   database: ChatDatabase;
 }
 
-const UNANSWERED: ChatNotice = { kind: 'stopped', message: '这条消息还没有收到回复。' };
+const UNANSWERED: ChatNotice = { kind: 'stopped', reason: 'unanswered' };
+
+function toNotice(error: unknown): ChatNotice {
+  if (isAbortError(error)) {
+    return { kind: 'stopped', reason: 'aborted' };
+  }
+  if (error instanceof ChatTransportError) {
+    return { kind: 'error', reason: error.code, status: error.status, detail: error.detail };
+  }
+  return { kind: 'error', reason: 'unknown' };
+}
 
 /** 只把 user / assistant 的文字发给后端；人格 Prompt 由后端负责拼接 */
 export function buildContext(messages: Message[], windowSize: number): ChatContextMessage[] {
@@ -132,13 +154,7 @@ export function createChatStore({ transport, database }: ChatStoreDeps) {
         }
       } catch (error) {
         if (get().conversationId === conversationId) {
-          set({
-            status: 'ready',
-            notice: {
-              kind: isAbortError(error) ? 'stopped' : 'error',
-              message: toUserMessage(error),
-            },
-          });
+          set({ status: 'ready', notice: toNotice(error) });
         }
       } finally {
         if (controller === current) {
@@ -179,10 +195,7 @@ export function createChatStore({ transport, database }: ChatStoreDeps) {
             set({ status: 'ready' });
           }
         } catch {
-          set({
-            status: 'ready',
-            notice: { kind: 'error', message: '读取本地聊天记录失败，新的消息仍可以正常发送。' },
-          });
+          set({ status: 'ready', notice: { kind: 'error', reason: 'history' } });
         }
       },
 

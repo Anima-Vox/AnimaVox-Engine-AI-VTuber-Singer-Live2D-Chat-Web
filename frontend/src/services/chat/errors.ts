@@ -1,20 +1,22 @@
-/** 对话请求失败的分类，界面据此决定提示文案 */
+/** 对话请求失败的分类，界面据此显示对应语言的提示 */
 export type ChatErrorCode =
   'aborted' | 'network' | 'timeout' | 'http' | 'invalid_response' | 'unknown';
 
 /**
  * 统一的对话错误。
- * message 是给人看的中文说明，会直接显示在聊天界面上。
+ * 不带界面文字：提示文案在 src/i18n 里按语言显示；detail 是后端返回的原话（有的话）。
  */
 export class ChatTransportError extends Error {
   readonly code: ChatErrorCode;
   readonly status: number | undefined;
+  readonly detail: string | undefined;
 
-  constructor(code: ChatErrorCode, message: string, status?: number) {
-    super(message);
+  constructor(code: ChatErrorCode, options: { status?: number; detail?: string } = {}) {
+    super(options.detail ?? code);
     this.name = 'ChatTransportError';
     this.code = code;
-    this.status = status;
+    this.status = options.status;
+    this.detail = options.detail;
   }
 }
 
@@ -23,12 +25,4 @@ export function isAbortError(error: unknown): boolean {
     return error.code === 'aborted';
   }
   return error instanceof DOMException && error.name === 'AbortError';
-}
-
-/** 把任意抛出物转成可以显示给用户的一句话 */
-export function toUserMessage(error: unknown): string {
-  if (error instanceof ChatTransportError) {
-    return error.message;
-  }
-  return '出了点意外，请再试一次。';
 }

@@ -1,8 +1,10 @@
 import type { CharacterProfile } from '../../config/characters';
+import { useT } from '../../i18n';
 import { Avatar } from '../common/Avatar';
 
 /** 等待回复时的「正在输入」气泡 */
 export function TypingBubble({ character }: { character: CharacterProfile }) {
+  const t = useT().chat;
   return (
     <div className="flex items-start gap-3.5" role="status">
       <Avatar character={character} />
@@ -15,7 +17,7 @@ export function TypingBubble({ character }: { character: CharacterProfile }) {
             style={{ animationDelay: `${index * 0.16}s` }}
           />
         ))}
-        <span className="sr-only">{character.shortName}正在输入</span>
+        <span className="sr-only">{t.typing(character)}</span>
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import clsx from 'clsx';
 import type { CharacterProfile } from '../../config/characters';
+import { useT } from '../../i18n';
 import { CharacterVisual } from './CharacterVisual';
 
 interface CharacterStageProps {
@@ -12,9 +13,10 @@ interface CharacterStageProps {
  * 展示框的形状与渐变见 styles/index.css 的 .stage-frame。
  */
 export function CharacterStage({ character, isThinking }: CharacterStageProps) {
+  const t = useT().stage;
   return (
     <aside
-      aria-label={`${character.name}的形象`}
+      aria-label={t.label(character)}
       className="flex min-h-0 w-full flex-col items-center px-[2.2rem] pb-[2.4rem] pt-[2.6rem]"
     >
       <div className="stage-slot min-h-0 w-full flex-1">
@@ -37,7 +39,7 @@ export function CharacterStage({ character, isThinking }: CharacterStageProps) {
               isThinking ? 'animate-pulse bg-signal' : 'bg-[#3FB27A]',
             )}
           />
-          {isThinking ? '正在输入…' : '在线'}
+          {isThinking ? t.typing : t.online}
         </p>
       </div>
     </aside>

@@ -28,6 +28,10 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  html:lang(zh-TW) body {
+    font-family: theme('fontFamily.sans-tc');
+  }
+
   ::selection {
     background: theme('colors.signal.soft');
     color: theme('colors.ink');

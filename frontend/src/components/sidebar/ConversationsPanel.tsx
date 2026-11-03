@@ -2,6 +2,7 @@ import clsx from 'clsx';
 import { useEffect, useState } from 'react';
 import type { Conversation } from '@shared';
 import type { CharacterProfile } from '../../config/characters';
+import { useT } from '../../i18n';
 import { formatSidebarTime } from '../../utils/time';
 import { PlusIcon, TrashIcon } from '../common/icons';
 import { SidePanel } from './SidePanel';
@@ -24,6 +25,7 @@ interface ItemProps {
 
 /** 一条历史对话；删除需要再确认一次，4 秒内没确认就复原 */
 function ConversationItem({ conversation, isActive, onSelect, onDelete }: ItemProps) {
+  const t = useT().conversations;
   const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
@@ -51,7 +53,7 @@ function ConversationItem({ conversation, isActive, onSelect, onDelete }: ItemPr
           {conversation.title}
         </span>
         <time dateTime={conversation.updatedAt} className="shrink-0 text-[0.75rem] text-haze">
-          {formatSidebarTime(conversation.updatedAt)}
+          {formatSidebarTime(conversation.updatedAt, t.yesterday)}
         </time>
       </button>
       {confirming ? (
@@ -61,14 +63,14 @@ function ConversationItem({ conversation, isActive, onSelect, onDelete }: ItemPr
           onBlur={() => setConfirming(false)}
           className="shrink-0 rounded-lg bg-alert px-2.5 py-1 text-[0.8rem] text-white"
         >
-          确认删除
+          {t.confirmDelete}
         </button>
       ) : (
         <button
           type="button"
           onClick={() => setConfirming(true)}
-          aria-label={`删除对话：${conversation.title}`}
-          title="删除对话"
+          aria-label={t.deleteNamed(conversation.title)}
+          title={t.delete}
           className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-haze opacity-0 transition hover:bg-mist-deep hover:text-alert focus-visible:opacity-100 group-hover:opacity-100"
         >
           <TrashIcon className="text-[1rem]" />
@@ -87,9 +89,10 @@ export function ConversationsPanel({
   onSelect,
   onDelete,
 }: ConversationsPanelProps) {
+  const t = useT().conversations;
   return (
     <SidePanel
-      title={`和${character.shortName}的对话`}
+      title={t.title(character)}
       action={
         <button
           type="button"
@@ -97,14 +100,14 @@ export function ConversationsPanel({
           className="flex shrink-0 items-center gap-1.5 rounded-full bg-signal-soft px-3.5 py-1.5 text-[0.85rem] text-signal-deep transition-colors hover:bg-signal hover:text-white"
         >
           <PlusIcon className="text-[0.95rem]" />
-          新对话
+          {t.new}
         </button>
       }
     >
       <ul className="flex flex-col gap-0.5">
         {activeId === null && (
           <li className="rounded-xl bg-signal-soft px-3.5 py-2.5 text-[0.95rem] text-ink">
-            新的对话
+            {t.untitled}
           </li>
         )}
         {conversations.map((conversation) => (
@@ -118,9 +121,7 @@ export function ConversationsPanel({
         ))}
       </ul>
       {conversations.length === 0 && (
-        <p className="px-3.5 pt-3 text-[0.85rem] leading-relaxed text-haze">
-          发出第一句话后，对话会保存在这里。
-        </p>
+        <p className="px-3.5 pt-3 text-[0.85rem] leading-relaxed text-haze">{t.empty}</p>
       )}
     </SidePanel>
   );

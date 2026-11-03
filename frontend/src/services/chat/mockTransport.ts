@@ -37,7 +37,7 @@ function defaultDelay(userText: string): number {
 function wait(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {
-      reject(new ChatTransportError('aborted', '已停止等待回复。'));
+      reject(new ChatTransportError('aborted'));
       return;
     }
     const timer = setTimeout(() => {
@@ -46,7 +46,7 @@ function wait(ms: number, signal?: AbortSignal): Promise<void> {
     }, ms);
     function onAbort() {
       clearTimeout(timer);
-      reject(new ChatTransportError('aborted', '已停止等待回复。'));
+      reject(new ChatTransportError('aborted'));
     }
     signal?.addEventListener('abort', onAbort, { once: true });
   });
@@ -64,13 +64,13 @@ export function createMockTransport(options: MockTransportOptions = {}): ChatTra
     async send(request, sendOptions = {}) {
       const lastUser = [...request.messages].reverse().find((message) => message.role === 'user');
       if (!lastUser) {
-        throw new ChatTransportError('http', '请求里没有用户消息。', 400);
+        throw new ChatTransportError('http', { status: 400 });
       }
 
       await wait(delayMs(lastUser.content), sendOptions.signal);
 
       if (MOCK_ERROR_TRIGGER.test(lastUser.content)) {
-        throw new ChatTransportError('http', '服务器返回错误（500）：这是演示用的模拟错误。', 500);
+        throw new ChatTransportError('http', { status: 500 });
       }
 
       const response: ChatResponse = {

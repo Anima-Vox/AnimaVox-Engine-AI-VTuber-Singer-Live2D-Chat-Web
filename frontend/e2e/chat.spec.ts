@@ -86,6 +86,22 @@ test('官方角色的人设与 API 显示为锁定', async ({ page }) => {
   await expect(page.getByText(/固定使用官方模型与 API/)).toBeVisible();
 });
 
+test('界面可以切换成繁体与英文，角色台词不变，刷新后仍记得', async ({ page }) => {
+  await page.getByRole('button', { name: '设置' }).click();
+
+  await page.getByRole('button', { name: '繁體中文' }).click();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW');
+  await expect(page.getByRole('button', { name: '設置' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'English' }).click();
+  await expect(page.getByRole('textbox', { name: 'Message input' })).toBeVisible();
+  await expect(page.getByText('嗨，我是佳尹。今天想聊点什么？')).toBeVisible();
+
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await expect(page.getByRole('region', { name: 'Chats with Jayin Li' })).toBeVisible();
+});
+
 test('服务器出错时显示提示与重试按钮', async ({ page }) => {
   await say(page, '模拟错误');
   await expect(page.getByRole('alert')).toContainText('没有收到回复');

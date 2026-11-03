@@ -29,7 +29,7 @@ function flakyTransport(requests: ChatRequest[] = []): ChatTransport {
     async send(request: ChatRequest): Promise<ChatResponse> {
       requests.push(request);
       if (requests.length === 1) {
-        throw new ChatTransportError('network', '连不上服务器，请检查网络或确认后端已经启动。');
+        throw new ChatTransportError('network');
       }
       return inner.send(request);
     },

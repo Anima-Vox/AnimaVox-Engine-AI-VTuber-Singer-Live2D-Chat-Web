@@ -1,5 +1,6 @@
 import clsx from 'clsx';
 import { isLocked, type CharacterProfile } from '../../config/characters';
+import { useT } from '../../i18n';
 import { Avatar } from '../common/Avatar';
 import { LockIcon, PlusIcon } from '../common/icons';
 import { SidePanel } from './SidePanel';
@@ -12,8 +13,9 @@ interface CharactersPanelProps {
 
 /** 切换角色：官方角色在前，之后是使用者自己创建的角色 */
 export function CharactersPanel({ characters, activeId, onSelect }: CharactersPanelProps) {
+  const t = useT().characters;
   return (
-    <SidePanel title="角色">
+    <SidePanel title={t.title}>
       <ul className="flex flex-col gap-2">
         {characters.map((character) => {
           const isActive = character.id === activeId;
@@ -35,7 +37,7 @@ export function CharactersPanel({ characters, activeId, onSelect }: CharactersPa
                     {isLocked(character) && (
                       <span className="flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[0.7rem] text-signal-deep">
                         <LockIcon className="text-[0.75rem]" />
-                        官方
+                        {t.official}
                       </span>
                     )}
                   </span>
@@ -58,8 +60,8 @@ export function CharactersPanel({ characters, activeId, onSelect }: CharactersPa
           <PlusIcon />
         </span>
         <span>
-          <span className="block text-[0.95rem]">创建自己的角色</span>
-          <span className="block text-[0.8rem]">开源引擎功能，即将开放</span>
+          <span className="block text-[0.95rem]">{t.create}</span>
+          <span className="block text-[0.8rem]">{t.comingSoon}</span>
         </span>
       </button>
     </SidePanel>

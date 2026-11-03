@@ -3,6 +3,8 @@ import { db, type ChatDatabase } from '../index';
 export const SETTING_KEYS = {
   /** 上次使用的角色 */
   activeCharacterId: 'activeCharacterId',
+  /** 界面语言 */
+  locale: 'locale',
 } as const;
 
 export async function getSetting(key: string, database: ChatDatabase = db): Promise<string | null> {

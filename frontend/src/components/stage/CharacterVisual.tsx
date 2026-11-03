@@ -1,10 +1,12 @@
 import type { CharacterVisual as Visual } from '../../config/characters';
+import { useT } from '../../i18n';
 
 /**
  * 展示框里的内容，按形象类型切换。
  * Phase 2 接 Live2D 时，只需要在 'live2d' 分支挂上渲染器组件。
  */
 export function CharacterVisual({ visual }: { visual: Visual }) {
+  const t = useT().stage;
   switch (visual.kind) {
     case 'image':
       return (
@@ -16,7 +18,7 @@ export function CharacterVisual({ visual }: { visual: Visual }) {
       );
     case 'live2d':
       // Phase 2：在这里挂载 Live2D 渲染器（visual.modelUrl）
-      return <StageCaption caption="Live2D 准备中" note="Phase 2" />;
+      return <StageCaption caption={t.live2dPending} note="Phase 2" />;
     case 'placeholder':
       return <StageCaption caption={visual.caption} note={visual.note} />;
   }

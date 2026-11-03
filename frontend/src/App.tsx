@@ -10,9 +10,11 @@ import { PersonaPanel } from './components/sidebar/PersonaPanel';
 import { SettingsPanel } from './components/sidebar/SettingsPanel';
 import { CharacterStage } from './components/stage/CharacterStage';
 import { getCharacter, OFFICIAL_CHARACTERS } from './config/characters';
+import { useT } from './i18n';
 import { chatTransport } from './services/chat';
 import { useCharacterStore } from './stores/characterStore';
 import { useChatStore } from './stores/chatStore';
+import { useLocaleStore } from './stores/localeStore';
 
 /**
  * 主界面（以 2560 × 1440 为基准）：
@@ -27,13 +29,23 @@ export function App() {
   const restoreCharacter = useCharacterStore((state) => state.restore);
   const switchCharacter = useCharacterStore((state) => state.switchTo);
 
+  const locale = useLocaleStore((state) => state.locale);
+  const restoreLocale = useLocaleStore((state) => state.restore);
+  const t = useT();
+
   const chat = useChatStore();
   const { openCharacter } = chat;
   const character = getCharacter(activeCharacterId);
 
   useEffect(() => {
     void restoreCharacter();
-  }, [restoreCharacter]);
+    void restoreLocale();
+  }, [restoreCharacter, restoreLocale]);
+
+  // 让浏览器按语言选字形（繁体用繁中字体）
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
 
   // 角色确定（或切换）后，读出这个角色的历史对话
   useEffect(() => {
@@ -95,7 +107,7 @@ export function App() {
           onDismiss={chat.dismissNotice}
         />
         <Composer
-          placeholder={`和${character.shortName}说点什么…`}
+          placeholder={t.chat.placeholder(character)}
           isWaiting={isWaiting}
           disabled={isLoading}
           onSend={(text) => void chat.send(text)}

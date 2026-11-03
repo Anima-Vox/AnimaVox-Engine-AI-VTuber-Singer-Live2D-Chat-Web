@@ -1,27 +1,26 @@
 import clsx from 'clsx';
 import type { ComponentType, SVGProps } from 'react';
 import logoUrl from '../../assets/brand/animavox-vertical-on-dark.svg';
+import { useT } from '../../i18n';
 import { CharacterIcon, ChatIcon, GearIcon, KeyIcon, PersonaIcon } from '../common/icons';
 
 /** 侧边列表可以显示的面板 */
 export type PanelId = 'conversations' | 'characters' | 'persona' | 'api' | 'settings';
 
+/** 菜单项的文字（label，以及鼠标悬停时的完整说明 title）在 i18n 的 nav 里 */
 interface NavItem {
   id: PanelId;
-  label: string;
-  /** 鼠标悬停时的完整说明 */
-  title: string;
   Icon: ComponentType<SVGProps<SVGSVGElement>>;
 }
 
 const MAIN_ITEMS: readonly NavItem[] = [
-  { id: 'conversations', label: '对话', title: '对话记录', Icon: ChatIcon },
-  { id: 'characters', label: '角色', title: '切换角色', Icon: CharacterIcon },
-  { id: 'persona', label: '人设', title: '人设 Prompt', Icon: PersonaIcon },
-  { id: 'api', label: 'API', title: '模型与 API', Icon: KeyIcon },
+  { id: 'conversations', Icon: ChatIcon },
+  { id: 'characters', Icon: CharacterIcon },
+  { id: 'persona', Icon: PersonaIcon },
+  { id: 'api', Icon: KeyIcon },
 ];
 
-const SETTINGS_ITEM: NavItem = { id: 'settings', label: '设置', title: '设置', Icon: GearIcon };
+const SETTINGS_ITEM: NavItem = { id: 'settings', Icon: GearIcon };
 
 interface NavRailProps {
   active: PanelId;
@@ -38,10 +37,11 @@ function NavButton({
   onSelect: (panel: PanelId) => void;
 }) {
   const { Icon } = item;
+  const text = useT().nav[item.id];
   return (
     <button
       type="button"
-      title={item.title}
+      title={text.title}
       aria-current={isActive ? 'page' : undefined}
       onClick={() => onSelect(item.id)}
       className={clsx(
@@ -58,16 +58,17 @@ function NavButton({
         />
       )}
       <Icon className="text-[1.3rem]" />
-      <span className="text-[0.7rem] leading-none">{item.label}</span>
+      <span className="text-[0.7rem] leading-none">{text.label}</span>
     </button>
   );
 }
 
 /** 最左侧的菜单栏：AnimaVox 引擎的所有功能入口 */
 export function NavRail({ active, onSelect }: NavRailProps) {
+  const t = useT();
   return (
     <nav
-      aria-label="主菜单"
+      aria-label={t.nav.menu}
       className="flex w-[4.6rem] shrink-0 flex-col items-center gap-2 bg-night py-5"
     >
       <img

@@ -23,24 +23,22 @@ async function toChatError(error: unknown): Promise<ChatTransportError> {
     return error;
   }
   if (isAbortError(error)) {
-    return new ChatTransportError('aborted', '已停止等待回复。');
+    return new ChatTransportError('aborted');
   }
   if (error instanceof TimeoutError) {
-    return new ChatTransportError('timeout', '等了太久没有回应，请稍后再试。');
+    return new ChatTransportError('timeout');
   }
   if (error instanceof HTTPError) {
-    const status = error.response.status;
     const detail = await readServerMessage(error);
-    return new ChatTransportError(
-      'http',
-      detail ? `服务器返回错误（${status}）：${detail}` : `服务器返回错误（${status}）。`,
-      status,
-    );
+    return new ChatTransportError('http', {
+      status: error.response.status,
+      detail: detail ?? undefined,
+    });
   }
   if (error instanceof TypeError) {
-    return new ChatTransportError('network', '连不上服务器，请检查网络或确认后端已经启动。');
+    return new ChatTransportError('network');
   }
-  return new ChatTransportError('unknown', '出了点意外，请再试一次。');
+  return new ChatTransportError('unknown');
 }
 
 /**
@@ -67,10 +65,7 @@ export function createHttpTransport(baseUrl: string = APP_CONFIG.apiBaseUrl): Ch
 
       const parsed = ChatResponseSchema.safeParse(payload);
       if (!parsed.success) {
-        throw new ChatTransportError(
-          'invalid_response',
-          '服务器返回的数据格式不对，请联系后端检查。',
-        );
+        throw new ChatTransportError('invalid_response');
       }
       return parsed.data;
     },

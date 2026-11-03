@@ -88,6 +88,7 @@ src/
 │   ├── chatStore.ts             对话：历史列表 / 新对话 / 切换 / 删除 / 发送 / 重试 / 停止
 │   └── characterStore.ts        当前角色（记在本地）
 ├── db/                          IndexedDB（会话、消息、设置）
+├── assets/brand/                AnimaVox LOGO（左上角，文字已转曲线）
 └── components/
     ├── nav/                     最左侧菜单栏
     ├── sidebar/                 侧边列表：对话记录、角色、人设、API、设置

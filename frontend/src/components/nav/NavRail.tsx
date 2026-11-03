@@ -1,5 +1,6 @@
 import clsx from 'clsx';
 import type { ComponentType, SVGProps } from 'react';
+import logoUrl from '../../assets/brand/animavox-vertical-on-dark.svg';
 import { CharacterIcon, ChatIcon, GearIcon, KeyIcon, PersonaIcon } from '../common/icons';
 
 /** 侧边列表可以显示的面板 */
@@ -69,17 +70,13 @@ export function NavRail({ active, onSelect }: NavRailProps) {
       aria-label="主菜单"
       className="flex w-[4.6rem] shrink-0 flex-col items-center gap-2 bg-night py-5"
     >
-      <div title="AnimaVox 心音" className="mb-4 flex h-9 items-center gap-[3px]">
-        {[0.45, 0.85, 1, 0.6].map((height, index) => (
-          <span
-            key={index}
-            aria-hidden="true"
-            className="w-[5px] rounded-full bg-gradient-to-b from-glow via-signal to-dusk"
-            style={{ height: `${height * 100}%` }}
-          />
-        ))}
-        <span className="sr-only">AnimaVox 心音</span>
-      </div>
+      <img
+        src={logoUrl}
+        alt="AnimaVox 心音"
+        title="AnimaVox 心音"
+        draggable={false}
+        className="mb-4 w-[3.8rem] select-none"
+      />
 
       {MAIN_ITEMS.map((item) => (
         <NavButton key={item.id} item={item} isActive={active === item.id} onSelect={onSelect} />

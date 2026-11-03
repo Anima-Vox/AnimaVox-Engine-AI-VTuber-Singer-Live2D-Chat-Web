@@ -1,218 +1,217 @@
 import { create } from 'zustand';
-import type { ChatContextMessage, Conversation, Message } from '@shared';
+import type { ChatContextMessage, KnownEmotion, Message } from '@shared';
+import { APP_CONFIG } from '../config/app';
+import { CHARACTER } from '../config/character';
+import { db, type ChatDatabase } from '../db';
 import {
-  createConversation as createConversationRecord,
-  deleteConversation as deleteConversationRecord,
-  listConversations,
+  createConversation,
+  deleteConversation,
+  getLatestConversation,
   renameConversationByFirstMessage,
-  setConversationActiveModel,
   touchConversation,
 } from '../db/repositories/conversationRepository';
 import { addMessage, listMessages } from '../db/repositories/messageRepository';
-import { sendChatMessage } from '../services/chatApi';
-import {
-  buildContextMessages,
-  buildSystemPrompt,
-  DEFAULT_CONTEXT_WINDOW,
-} from '../utils/systemPrompt';
-import { useCharacterStore } from './characterStore';
-import { useLive2dStore } from './live2dStore';
-import { selectActiveConfig, useModelStore } from './modelStore';
+import { chatTransport, isAbortError, toUserMessage, type ChatTransport } from '../services/chat';
+import { normalizeEmotion } from '../utils/emotion';
 
-export type ChatStatus = 'idle' | 'sending' | 'error';
+/** loading = 正在读取本地记录；ready = 可以发送；waiting = 等佳尹回复 */
+export type ChatStatus = 'loading' | 'ready' | 'waiting';
 
-interface ChatState {
-  conversations: Conversation[];
-  activeConversationId: string | null;
+/** 显示在消息列表底部的提示：请求失败或用户主动停止 */
+export interface ChatNotice {
+  kind: 'error' | 'stopped';
+  message: string;
+}
+
+export interface ChatState {
+  conversationId: string | null;
   messages: Message[];
   status: ChatStatus;
-  error: string | null;
-  /** 启动时加载会话列表，并恢复最近一次会话 */
+  notice: ChatNotice | null;
+  /** 佳尹当前的情绪（取最后一条回复），舞台区用它显示 emoji */
+  currentEmotion: KnownEmotion;
+
+  /** 启动时读取最近一次会话 */
   load: () => Promise<void>;
-  createConversation: () => Promise<string | null>;
-  selectConversation: (id: string) => Promise<void>;
-  removeConversation: (id: string) => Promise<void>;
-  /** 发送用户消息并写入模型回复（含持久化与表情联动） */
-  sendMessage: (text: string) => Promise<void>;
-  /** 新建会话并插入角色开场白（本地生成，不消耗 API） */
-  greetInNewConversation: (greeting: string) => Promise<void>;
-  /** 切换模型：更新全局激活配置，同时记录到当前会话（上下文不丢） */
-  switchModel: (modelConfigId: string) => Promise<void>;
-  clearError: () => void;
+  /** 发送一条用户消息，并等待回复 */
+  send: (text: string) => Promise<void>;
+  /** 上一次没有收到回复时，重新请求（不会重复写入用户消息） */
+  retry: () => Promise<void>;
+  /** 停止等待当前回复 */
+  stop: () => void;
+  /** 删除当前会话的本地记录，开始新的对话 */
+  clear: () => Promise<void>;
+  dismissNotice: () => void;
 }
 
-function toHistory(messages: Message[]): Array<{ role: Message['role']; content: string }> {
-  return messages.map((message) => ({ role: message.role, content: message.content }));
+export interface ChatStoreDeps {
+  transport: ChatTransport;
+  database: ChatDatabase;
 }
 
-export const useChatStore = create<ChatState>()((set, get) => ({
-  conversations: [],
-  activeConversationId: null,
-  messages: [],
-  status: 'idle',
-  error: null,
+/** 只把 user / assistant 的文字发给后端；人格 Prompt 由后端负责拼接 */
+export function buildContext(messages: Message[], windowSize: number): ChatContextMessage[] {
+  return messages
+    .filter((message) => message.role === 'user' || message.role === 'assistant')
+    .slice(-windowSize)
+    .map((message) => ({ role: message.role, content: message.content }));
+}
 
-  load: async () => {
-    try {
-      const conversations = await listConversations();
-      const [latest] = conversations;
-      set({ conversations });
+function lastEmotion(messages: Message[]): KnownEmotion {
+  const lastReply = [...messages].reverse().find((message) => message.role === 'assistant');
+  return normalizeEmotion(lastReply?.emotion);
+}
 
-      if (latest) {
-        const messages = await listMessages(latest.id);
-        set({ activeConversationId: latest.id, messages });
+/** 工厂函数：测试时可以注入假的 transport 与独立的数据库 */
+export function createChatStore({ transport, database }: ChatStoreDeps) {
+  let controller: AbortController | null = null;
+
+  return create<ChatState>()((set, get) => {
+    /** 向后端要一条回复，成功后写入本地并更新界面 */
+    async function requestReply(conversationId: string): Promise<void> {
+      controller?.abort();
+      const current = new AbortController();
+      controller = current;
+      set({ status: 'waiting', notice: null });
+
+      try {
+        const result = await transport.send(
+          {
+            conversationId,
+            modelConfigId: APP_CONFIG.modelConfigId,
+            messages: buildContext(get().messages, APP_CONFIG.contextWindow),
+          },
+          { signal: current.signal },
+        );
+
+        // 等待期间会话已被清空或切换：丢弃这条迟到的回复
+        if (get().conversationId !== conversationId) {
+          return;
+        }
+
+        const { response } = result;
+        const reply = await addMessage(
+          {
+            id: result.messageId,
+            createdAt: result.createdAt,
+            conversationId,
+            role: 'assistant',
+            content: response.text,
+            emotion: response.emotion,
+            action: response.action,
+            expression: response.expression,
+            toolCalls: response.tool_calls,
+          },
+          database,
+        );
+        await touchConversation(conversationId, database);
+
+        set({
+          messages: [...get().messages, reply],
+          status: 'ready',
+          currentEmotion: normalizeEmotion(response.emotion),
+        });
+      } catch (error) {
+        if (get().conversationId !== conversationId) {
+          return;
+        }
+        set({
+          status: 'ready',
+          notice: {
+            kind: isAbortError(error) ? 'stopped' : 'error',
+            message: toUserMessage(error),
+          },
+        });
+      } finally {
+        if (controller === current) {
+          controller = null;
+        }
       }
-    } catch (cause) {
-      set({ error: cause instanceof Error ? cause.message : String(cause) });
-    }
-  },
-
-  createConversation: async () => {
-    const character = useCharacterStore.getState().character;
-    const modelConfig = selectActiveConfig(useModelStore.getState());
-
-    if (!character || !modelConfig) {
-      set({ status: 'error', error: '请先完成角色与模型配置，再开始新会话' });
-      return null;
     }
 
-    const conversation = await createConversationRecord({
-      characterId: character.id,
-      activeModelId: modelConfig.id,
-    });
-
-    set({
-      conversations: [conversation, ...get().conversations],
-      activeConversationId: conversation.id,
+    return {
+      conversationId: null,
       messages: [],
-      status: 'idle',
-      error: null,
-    });
+      status: 'loading',
+      notice: null,
+      currentEmotion: 'neutral',
 
-    return conversation.id;
-  },
+      load: async () => {
+        try {
+          const latest = await getLatestConversation(database);
+          const messages = latest ? await listMessages(latest.id, database) : [];
+          set({
+            conversationId: latest?.id ?? null,
+            messages,
+            status: 'ready',
+            currentEmotion: lastEmotion(messages),
+          });
+        } catch {
+          set({
+            status: 'ready',
+            notice: { kind: 'error', message: '读取本地聊天记录失败，新的消息仍可以正常发送。' },
+          });
+        }
+      },
 
-  selectConversation: async (id) => {
-    const messages = await listMessages(id);
-    set({ activeConversationId: id, messages, status: 'idle', error: null });
-  },
+      send: async (text) => {
+        const content = text.trim();
+        if (!content || get().status !== 'ready') {
+          return;
+        }
 
-  removeConversation: async (id) => {
-    await deleteConversationRecord(id);
-    const conversations = await listConversations();
-    const nextActive =
-      get().activeConversationId === id
-        ? (conversations[0]?.id ?? null)
-        : get().activeConversationId;
-    const messages = nextActive ? await listMessages(nextActive) : [];
+        let conversationId = get().conversationId;
+        if (!conversationId) {
+          const conversation = await createConversation(
+            { characterId: CHARACTER.id, activeModelId: APP_CONFIG.modelConfigId },
+            database,
+          );
+          conversationId = conversation.id;
+          set({ conversationId });
+        }
 
-    set({ conversations, activeConversationId: nextActive, messages });
-  },
+        const isFirstUserMessage = !get().messages.some((message) => message.role === 'user');
+        const userMessage = await addMessage({ conversationId, role: 'user', content }, database);
+        set({ messages: [...get().messages, userMessage] });
 
-  sendMessage: async (text) => {
-    const content = text.trim();
-    if (!content || get().status === 'sending') {
-      return;
-    }
+        if (isFirstUserMessage) {
+          await renameConversationByFirstMessage(conversationId, content, database);
+        }
 
-    const character = useCharacterStore.getState().character;
-    const modelConfig = selectActiveConfig(useModelStore.getState());
+        await requestReply(conversationId);
+      },
 
-    if (!character || !modelConfig) {
-      set({ status: 'error', error: '缺少角色设定或模型配置，请先完成引导设置' });
-      return;
-    }
+      retry: async () => {
+        const { conversationId, messages, status } = get();
+        if (!conversationId || status !== 'ready' || messages.at(-1)?.role !== 'user') {
+          return;
+        }
+        await requestReply(conversationId);
+      },
 
-    // 没有会话时自动开一个，保证「打开就能聊」
-    let conversationId = get().activeConversationId;
-    if (!conversationId) {
-      conversationId = await get().createConversation();
-      if (!conversationId) {
-        return;
-      }
-    }
+      stop: () => {
+        controller?.abort();
+      },
 
-    // 标题取「第一句用户消息」——不能只看会话是否为空，因为角色开场白会先占掉一条消息
-    const isFirstUserMessage = !get().messages.some((message) => message.role === 'user');
-    const userMessage = await addMessage({ conversationId, role: 'user', content });
+      clear: async () => {
+        controller?.abort();
+        controller = null;
+        const { conversationId } = get();
+        set({
+          conversationId: null,
+          messages: [],
+          status: 'ready',
+          notice: null,
+          currentEmotion: 'neutral',
+        });
+        if (conversationId) {
+          await deleteConversation(conversationId, database);
+        }
+      },
 
-    set({ messages: [...get().messages, userMessage], status: 'sending', error: null });
+      dismissNotice: () => set({ notice: null }),
+    };
+  });
+}
 
-    try {
-      const contextMessages: ChatContextMessage[] = buildContextMessages({
-        systemPrompt: buildSystemPrompt(character),
-        history: toHistory(get().messages),
-        contextWindow: modelConfig.contextWindow || DEFAULT_CONTEXT_WINDOW,
-      });
-
-      const result = await sendChatMessage({
-        conversationId,
-        modelConfigId: modelConfig.id,
-        messages: contextMessages,
-      });
-
-      const assistantMessage = await addMessage({
-        conversationId,
-        role: 'assistant',
-        content: result.response.text,
-        emotion: result.response.emotion,
-        action: result.response.action,
-        expression: result.response.expression,
-        toolCalls: result.response.tool_calls,
-      });
-
-      await touchConversation(conversationId);
-      if (isFirstUserMessage) {
-        await renameConversationByFirstMessage(conversationId, content);
-      }
-
-      useLive2dStore.getState().setEmotion(result.response.emotion, {
-        expression: result.response.expression,
-        action: result.response.action,
-      });
-
-      set({
-        messages: [...get().messages, assistantMessage],
-        conversations: await listConversations(),
-        status: 'idle',
-        error: null,
-      });
-    } catch (cause) {
-      set({
-        status: 'error',
-        error: cause instanceof Error ? cause.message : String(cause),
-      });
-    }
-  },
-
-  greetInNewConversation: async (greeting) => {
-    const conversationId = await get().createConversation();
-    if (!conversationId) {
-      return;
-    }
-
-    const message = await addMessage({
-      conversationId,
-      role: 'assistant',
-      content: greeting,
-      emotion: 'happy',
-      action: 'greeting',
-      expression: 'smile',
-    });
-
-    useLive2dStore.getState().setEmotion('happy', { expression: 'smile', action: 'greeting' });
-    set({ messages: [message] });
-  },
-
-  switchModel: async (modelConfigId) => {
-    await useModelStore.getState().activate(modelConfigId);
-
-    const conversationId = get().activeConversationId;
-    if (conversationId) {
-      await setConversationActiveModel(conversationId, modelConfigId);
-      set({ conversations: await listConversations() });
-    }
-  },
-
-  clearError: () => set({ error: null, status: 'idle' }),
-}));
+export const useChatStore = createChatStore({ transport: chatTransport, database: db });

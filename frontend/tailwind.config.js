@@ -1,106 +1,74 @@
 /** @type {import('tailwindcss').Config} */
+
+/** 中文无衬线：Windows 用微软雅黑 UI，macOS 用苹方，Linux 用思源黑体 */
+const SANS = [
+  '"PingFang SC"',
+  '"HarmonyOS Sans SC"',
+  '"MiSans"',
+  '"Microsoft YaHei UI"',
+  '"Microsoft YaHei"',
+  '"Noto Sans SC"',
+  '"Noto Sans CJK SC"',
+  'system-ui',
+  'sans-serif',
+];
+
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        // 主基调：奶白纸感
-        cream: {
-          DEFAULT: '#FDF9F4',
-          deep: '#F6EDE4',
-          sunk: '#EFE3D8',
+        // 舞台：夜里的上海、录音室里的调音台
+        night: {
+          DEFAULT: '#16213A',
+          raised: '#1F2C4C',
+          line: '#2E3D63',
+          text: '#E9EEFB',
+          muted: '#9AA8C7',
         },
-        // 糯糯主题色：淡粉 / 鹅黄 / 薄荷绿 / 雾蓝
-        pink: {
-          DEFAULT: '#FFB8C8',
-          soft: '#FFD9E2',
-          deep: '#F79CB0',
+        // 对话区：偏蓝的中性色（参考 deepseek-harness 的 neutral-bluish）
+        ink: '#1B2438',
+        haze: '#5D6984',
+        mist: {
+          DEFAULT: '#EEF2F9',
+          deep: '#DFE6F4',
         },
-        yolk: {
-          DEFAULT: '#FFE3A3',
-          soft: '#FFF1CC',
+        // 主色：信号蓝（参考 AIRI 默认色相 220 与 DeepSeek 蓝）
+        signal: {
+          DEFAULT: '#3D63E8',
+          deep: '#2C4FCF',
+          soft: '#E0E8FD',
         },
-        mint: {
-          DEFAULT: '#B7E4D0',
-          soft: '#DCF3E9',
-        },
-        sky: {
-          DEFAULT: '#C7DCEF',
-          soft: '#E4EFF8',
-        },
-        // 文字：暖棕，不用纯黑
-        ink: {
-          DEFAULT: '#6B5B57',
-          soft: '#9C8B86',
-          deep: '#4A3E3B',
+        dusk: '#8F7DF0',
+        glow: '#62C6F0',
+        alert: {
+          DEFAULT: '#B4382F',
+          soft: '#FBEDEB',
         },
       },
       fontFamily: {
-        display: ['"ZCOOL KuaiLe"', '"LXGW WenKai"', 'system-ui', 'sans-serif'],
-        body: [
-          '"LXGW WenKai"',
-          'system-ui',
-          '-apple-system',
-          '"Segoe UI"',
-          '"Microsoft YaHei"',
-          'sans-serif',
-        ],
-      },
-      borderRadius: {
-        bubble: '22px',
-        blob: '28px',
-        panel: '32px',
-      },
-      boxShadow: {
-        soft: '0 12px 32px -12px rgba(160, 130, 130, 0.35)',
-        frosted: '0 8px 40px -8px rgba(160, 130, 130, 0.28)',
-        lift: '0 18px 42px -14px rgba(160, 130, 130, 0.45)',
-        glow: '0 0 60px -10px rgba(255, 184, 200, 0.65)',
+        sans: SANS,
+        // 佳尹说的话用霞鹜文楷：一眼就能分出是谁在说话
+        voice: ['"LXGW WenKai"', ...SANS],
       },
       keyframes: {
-        'rise-in': {
-          from: { opacity: '0', transform: 'translateY(14px)' },
-          to: { opacity: '1', transform: 'translateY(0)' },
-        },
-        'fade-in': {
-          from: { opacity: '0' },
-          to: { opacity: '1' },
-        },
-        'pop-in': {
-          '0%': { opacity: '0', transform: 'scale(0.9) translateY(8px)' },
-          '60%': { opacity: '1', transform: 'scale(1.02) translateY(0)' },
-          '100%': { opacity: '1', transform: 'scale(1) translateY(0)' },
-        },
-        'slide-in-left': {
-          from: { opacity: '0', transform: 'translateX(-24px)' },
-          to: { opacity: '1', transform: 'translateX(0)' },
-        },
-        drift: {
-          '0%, 100%': { transform: 'translate3d(0, 0, 0) scale(1)' },
-          '50%': { transform: 'translate3d(24px, -18px, 0) scale(1.06)' },
-        },
-        breathe: {
-          '0%, 100%': { opacity: '0.55', transform: 'scale(1)' },
-          '50%': { opacity: '0.85', transform: 'scale(1.05)' },
-        },
-        float: {
-          '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-10px)' },
+        meter: {
+          '0%, 100%': { transform: 'scaleY(var(--lo))' },
+          '50%': { transform: 'scaleY(var(--hi))' },
         },
         'dot-bounce': {
-          '0%, 80%, 100%': { transform: 'translateY(0)', opacity: '0.45' },
-          '40%': { transform: 'translateY(-6px)', opacity: '1' },
+          '0%, 80%, 100%': { transform: 'translateY(0)', opacity: '0.35' },
+          '40%': { transform: 'translateY(-0.3rem)', opacity: '1' },
+        },
+        pop: {
+          '0%': { transform: 'scale(0.6)', opacity: '0' },
+          '70%': { transform: 'scale(1.12)', opacity: '1' },
+          '100%': { transform: 'scale(1)' },
         },
       },
       animation: {
-        'rise-in': 'rise-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both',
-        'fade-in': 'fade-in 0.6s ease-out both',
-        'pop-in': 'pop-in 0.34s cubic-bezier(0.34, 1.56, 0.64, 1) both',
-        'slide-in-left': 'slide-in-left 0.32s cubic-bezier(0.22, 1, 0.36, 1) both',
-        drift: 'drift 16s ease-in-out infinite',
-        breathe: 'breathe 6s ease-in-out infinite',
-        float: 'float 5s ease-in-out infinite',
         'dot-bounce': 'dot-bounce 1.2s ease-in-out infinite',
+        pop: 'pop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) both',
       },
     },
   },

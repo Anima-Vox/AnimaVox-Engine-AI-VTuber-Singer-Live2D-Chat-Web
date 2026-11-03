@@ -1,45 +1,41 @@
-import clsx from 'clsx';
 import type { Message } from '@shared';
+import { getEmotionDisplay } from '../../utils/emotion';
 import { formatMessageTime } from '../../utils/time';
-import { resolveEmotion } from '../../utils/emotion';
+import { Avatar } from '../common/Avatar';
 
-export interface MessageBubbleProps {
+interface MessageBubbleProps {
   message: Message;
-  characterName: string;
 }
 
-export function MessageBubble({ message, characterName }: MessageBubbleProps) {
-  const isUser = message.role === 'user';
-  const visual = isUser ? null : resolveEmotion(message.emotion);
+/**
+ * 一条消息。
+ * 佳尹的回复只显示文字与情绪 emoji；action / expression 已保存在记录里，暂不显示。
+ */
+export function MessageBubble({ message }: MessageBubbleProps) {
+  const time = formatMessageTime(message.createdAt);
 
-  return (
-    <article className={clsx('flex animate-pop-in px-1', isUser ? 'justify-end' : 'justify-start')}>
-      <div
-        className={clsx('flex max-w-[86%] flex-col gap-1', isUser ? 'items-end' : 'items-start')}
-      >
-        {visual ? (
-          <span className="flex items-center gap-1.5 pl-2 text-[11px] text-ink-soft">
-            <span
-              className="h-1.5 w-1.5 rounded-full"
-              style={{ backgroundColor: visual.glow }}
-              aria-hidden
-            />
-            {characterName} · {visual.label}
-          </span>
-        ) : null}
-
-        <p
-          className={clsx(
-            'whitespace-pre-wrap break-words rounded-bubble px-4 py-2.5 text-sm leading-relaxed text-ink-deep shadow-soft',
-            isUser ? 'rounded-br-md bg-pink-soft' : 'glass-panel rounded-bl-md',
-          )}
-          style={visual ? { borderLeft: `3px solid ${visual.glow}` } : undefined}
-        >
+  if (message.role === 'user') {
+    return (
+      <article aria-label="你说" className="flex flex-col items-end">
+        <p className="max-w-[85%] whitespace-pre-wrap break-words rounded-[1.15rem] rounded-tr-md bg-signal-soft px-5 py-3 text-[1rem] leading-[1.7] text-ink">
           {message.content}
         </p>
+        <time dateTime={message.createdAt} className="mt-1.5 pr-1 text-[0.75rem] text-haze">
+          {time}
+        </time>
+      </article>
+    );
+  }
 
-        <time className="px-2 text-[10px] text-ink-soft/70" dateTime={message.createdAt}>
-          {formatMessageTime(message.createdAt)}
+  return (
+    <article aria-label="佳尹说" className="flex items-start gap-3.5">
+      <Avatar emotion={getEmotionDisplay(message.emotion)} />
+      <div className="flex min-w-0 max-w-[85%] flex-col items-start">
+        <p className="whitespace-pre-wrap break-words rounded-[1.15rem] rounded-tl-md border border-mist-deep bg-white px-5 py-3 font-voice text-[1.08rem] leading-[1.8] text-ink">
+          {message.content}
+        </p>
+        <time dateTime={message.createdAt} className="mt-1.5 pl-1 text-[0.75rem] text-haze">
+          {time}
         </time>
       </div>
     </article>

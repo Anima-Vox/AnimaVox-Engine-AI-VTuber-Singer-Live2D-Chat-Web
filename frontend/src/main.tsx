@@ -1,11 +1,9 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
 
-// 自托管字体：正文用霞鹜文楷，标题用站酷快乐体（不依赖外网，加载稳定）
+// 自托管字体（不依赖外网）：佳尹的台词用霞鹜文楷
 import 'lxgw-wenkai-webfont/lxgwwenkai-regular.css';
-import '@fontsource/zcool-kuaile/400.css';
 import './styles/index.css';
 
 const container = document.getElementById('root');
@@ -16,8 +14,6 @@ if (!container) {
 
 createRoot(container).render(
   <StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    <App />
   </StrictMode>,
 );

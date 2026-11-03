@@ -1,39 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { emotionToAction, emotionToExpression, resolveEmotion } from './emotion';
+import { getEmotionDisplay, normalizeEmotion } from './emotion';
 
-describe('resolveEmotion', () => {
-  it('识别标准情绪值并给出对应表情/动作', () => {
-    expect(resolveEmotion('happy').expression).toBe('smile');
-    expect(resolveEmotion('happy').action).toBe('wave');
-    expect(resolveEmotion('sad').expression).toBe('frown');
-    expect(resolveEmotion('neutral').action).toBe('idle');
-    expect(resolveEmotion('playful').label).toBe('撒娇');
+describe('normalizeEmotion', () => {
+  it('识别规格书定案的 7 种情绪', () => {
+    for (const value of ['happy', 'surprised', 'sad', 'angry', 'shy', 'playful', 'neutral']) {
+      expect(normalizeEmotion(value)).toBe(value);
+    }
   });
 
-  it('把同义词与大小写差异收敛到同一档', () => {
-    expect(resolveEmotion('Happy').emotion).toBe('happy');
-    expect(resolveEmotion('JOYFUL').emotion).toBe('happy');
-    expect(resolveEmotion(' 害羞 ').emotion).toBe('shy');
-    expect(resolveEmotion('委屈').emotion).toBe('sad');
-    expect(resolveEmotion('撒娇').emotion).toBe('playful');
+  it('把大小写、空白、简繁体同义词收敛到同一档', () => {
+    expect(normalizeEmotion('Happy')).toBe('happy');
+    expect(normalizeEmotion(' 害羞 ')).toBe('shy');
+    expect(normalizeEmotion('委屈')).toBe('sad');
+    expect(normalizeEmotion('開心')).toBe('happy');
+    expect(normalizeEmotion('撒嬌')).toBe('playful');
   });
 
-  it('无法识别或字段缺失时回落到 neutral，而不是抛错', () => {
-    const fallback = resolveEmotion('某种模型自创的奇怪情绪');
-    expect(fallback.emotion).toBe('neutral');
-    expect(resolveEmotion(undefined).emotion).toBe('neutral');
-    expect(resolveEmotion(null).emotion).toBe('neutral');
-    expect(resolveEmotion('').emotion).toBe('neutral');
+  it('无法识别或缺失时回落到 neutral，而不是抛错', () => {
+    expect(normalizeEmotion('模型自创的奇怪情绪')).toBe('neutral');
+    expect(normalizeEmotion(undefined)).toBe('neutral');
+    expect(normalizeEmotion(null)).toBe('neutral');
+    expect(normalizeEmotion('')).toBe('neutral');
   });
+});
 
-  it('同义词匹配是整串精确匹配，不会因子串误判', () => {
-    // 「兴奋」是 happy 的同义词，但整句并不等于「兴奋」
-    expect(resolveEmotion('兴奋到模糊但其实是 emo').emotion).toBe('neutral');
-  });
-
-  it('提供便捷函数只取表情与动作', () => {
-    expect(emotionToExpression('shy')).toBe('blush');
-    expect(emotionToAction('angry')).toBe('shake');
-    expect(emotionToExpression('unknown-value')).toBe('neutral');
+describe('getEmotionDisplay', () => {
+  it('每种情绪都对应一个 emoji 与中文名', () => {
+    expect(getEmotionDisplay('happy')).toEqual({ emotion: 'happy', emoji: '😊', label: '开心' });
+    expect(getEmotionDisplay('unknown').emoji).toBe('🙂');
   });
 });

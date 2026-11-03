@@ -23,6 +23,8 @@
 > 本倉庫目前處於 **Phase 1 開發中**：開源引擎的**前端 MVP 與最小 Mock 後端已完成並可運行**（見下方[快速開始](#-快速開始-quick-start)），
 > 語音管線（GPT-SoVITS TTS / STT）、真實 LLM 適配器、長期記憶與 Live2D 口型同步仍在開發中。
 > 歡迎透過 Issue 參與討論，或見下方[招募段落](#-招募同伴我們正在尋找開發夥伴-we-are-hiring)。
+>
+> **`feature/text-chat-v1` 分支**：前端精簡為純文字對話版（Live2D、設定頁、引導精靈暫時移除），預設使用瀏覽器內的假後端，說明見 [frontend/README.md](frontend/README.md)。
 
 ---
 

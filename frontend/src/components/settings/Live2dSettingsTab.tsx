@@ -42,6 +42,7 @@ export function Live2dSettingsTab() {
   const [draftUrl, setDraftUrl] = useState(modelPath ?? '');
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [error, setError] = useState('');
   const [manifestModels, setManifestModels] = useState<string[] | null>(null);
 
   useEffect(() => {
@@ -57,11 +58,20 @@ export function Live2dSettingsTab() {
     void refreshManifest();
   }, [refreshManifest]);
 
+  const rescanModels = async () => {
+    await refreshManifest();
+    if (source === 'directory') {
+      requestReload();
+    }
+  };
+
   const dirty =
     draftSource !== source || (draftSource === 'url' && draftUrl.trim() !== (modelPath ?? ''));
 
   const apply = async () => {
     setSaving(true);
+    setError('');
+    setSavedAt(null);
     try {
       const path = draftSource === 'url' && draftUrl.trim() ? draftUrl.trim() : undefined;
 
@@ -84,6 +94,8 @@ export function Live2dSettingsTab() {
       useLive2dStore.getState().setSource(draftSource);
       useLive2dStore.getState().setModelPath(path ?? null);
       setSavedAt(Date.now());
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
       setSaving(false);
     }
@@ -131,7 +143,7 @@ export function Live2dSettingsTab() {
       {draftSource === 'url' ? (
         <TextField
           label="模型地址"
-          hint="指向 .model3.json / .model.json"
+          hint="指向 Cubism 3/4 的 .model3.json（不支持旧版 .model.json）"
           value={draftUrl}
           onChange={(event) => setDraftUrl(event.target.value)}
           placeholder="https://example.com/model/xxx.model3.json"
@@ -147,7 +159,7 @@ export function Live2dSettingsTab() {
             </span>
             <button
               type="button"
-              onClick={() => void refreshManifest()}
+              onClick={() => void rescanModels()}
               className="rounded-full bg-white/85 px-3 py-1 text-[10px] text-ink transition hover:bg-white"
             >
               重新探测
@@ -168,6 +180,12 @@ export function Live2dSettingsTab() {
             </p>
           ) : null}
         </div>
+      ) : null}
+
+      {error ? (
+        <p className="text-xs text-pink-deep" role="alert">
+          应用失败：{error}，请重试。
+        </p>
       ) : null}
 
       <div className="flex items-center gap-2">

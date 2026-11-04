@@ -38,14 +38,15 @@ export const useCharacterStore = create<CharacterState>()((set, get) => ({
     const current = get().character;
     if (!current) {
       set({ error: '角色尚未初始化' });
-      return;
+      throw new Error('角色尚未初始化');
     }
 
     try {
       const character = await saveCharacterRecord(current.id, draft);
-      set({ character });
+      set({ character, error: null });
     } catch (cause) {
       set({ error: cause instanceof Error ? cause.message : String(cause) });
+      throw cause;
     }
   },
 }));

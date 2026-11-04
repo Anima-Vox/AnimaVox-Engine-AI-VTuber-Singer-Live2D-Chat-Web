@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'motion/react';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { LLM_PROVIDER_PRESETS, type CharacterDraft, type ModelConfigDraft } from '@shared';
 import { DEFAULT_CHARACTER } from '../../constants/defaultCharacter';
 import { SETTINGS_KEYS, type Live2dSource } from '../../constants/settingsKeys';
@@ -47,17 +47,21 @@ export function SetupWizard() {
   const [modelUrl, setModelUrl] = useState('');
   const [finishing, setFinishing] = useState(false);
   const [error, setError] = useState('');
+  const testVersion = useRef(0);
 
   const patchLlm = useCallback((patch: Partial<ModelConfigDraft>) => {
+    testVersion.current += 1;
     setLlmDraft((previous) => ({ ...previous, ...patch }));
     // 配置一改，之前的测试结果就不再可信
     setTestState({ status: 'idle', message: '' });
   }, []);
 
   const runTest = useCallback(async () => {
+    const version = ++testVersion.current;
     setTestState({ status: 'testing', message: '' });
     try {
       const result = await testModelConnection(llmDraft);
+      if (version !== testVersion.current) return;
       setTestState({
         status: result.ok ? 'ok' : 'fail',
         message:
@@ -66,6 +70,7 @@ export function SetupWizard() {
             : `${result.message}（${result.latencyMs} ms）`,
       });
     } catch (cause) {
+      if (version !== testVersion.current) return;
       setTestState({
         status: 'fail',
         message: cause instanceof Error ? cause.message : String(cause),

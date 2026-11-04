@@ -31,6 +31,13 @@ describe('resolveEmotion', () => {
     expect(resolveEmotion('兴奋到模糊但其实是 emo').emotion).toBe('neutral');
   });
 
+  it.each(['__proto__', 'constructor', 'toString', 'hasOwnProperty'])(
+    '继承属性 %s 也安全回落到 neutral',
+    (value) => {
+      expect(resolveEmotion(value).emotion).toBe('neutral');
+    },
+  );
+
   it('提供便捷函数只取表情与动作', () => {
     expect(emotionToExpression('shy')).toBe('blush');
     expect(emotionToAction('angry')).toBe('shake');

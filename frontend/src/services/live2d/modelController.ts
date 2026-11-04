@@ -15,6 +15,7 @@ export class Live2DStageController {
   private model: Live2DModelInstance | null = null;
   private container: HTMLElement | null = null;
   private destroyed = false;
+  private loadGeneration = 0;
 
   get hasModel(): boolean {
     return this.model !== null;
@@ -52,13 +53,17 @@ export class Live2DStageController {
       throw new Error('舞台尚未挂载');
     }
 
+    const generation = ++this.loadGeneration;
     // Cubism Core 运行时与 window.PIXI 都在 importLive2DModel 内处理好
     const { Live2DModel } = await importLive2DModel();
+    if (this.destroyed || generation !== this.loadGeneration) {
+      return;
+    }
     Live2DModel.registerTicker(Ticker);
 
     const model = await Live2DModel.from(url, { autoInteract: false });
 
-    if (this.destroyed) {
+    if (this.destroyed || generation !== this.loadGeneration) {
       model.destroy();
       return;
     }
@@ -97,7 +102,13 @@ export class Live2DStageController {
       return null;
     }
 
-    const applied = await model.expression(index);
+    let applied: boolean;
+    try {
+      applied = await model.expression(index);
+    } catch {
+      // 表情资源损坏时保留模型和文字对话，不让可选动画产生未处理拒绝。
+      return null;
+    }
     if (!applied) {
       return null;
     }
@@ -117,7 +128,11 @@ export class Live2DStageController {
     const matched = Object.keys(definitions).find((group) => group.toLowerCase() === wanted);
 
     if (matched) {
-      await model.motion(matched);
+      try {
+        await model.motion(matched);
+      } catch {
+        // 可选动作加载失败时保留当前模型，文字对话照常运行。
+      }
     }
   }
 

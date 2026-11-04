@@ -6,10 +6,10 @@ import { z } from 'zod';
  */
 const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  HOST: z.string().default('0.0.0.0'),
+  HOST: z.string().default('127.0.0.1'),
   PORT: z.coerce.number().int().positive().default(3001),
-  /** mock = 离线演示回复；live = 真实 LLM（第一版后端尚未实现，仍走 mock） */
-  LLM_MODE: z.enum(['mock', 'live']).default('mock'),
+  /** 当前只有 Mock；真实适配器接入前拒绝 live，避免健康检查误报。 */
+  LLM_MODE: z.literal('mock').default('mock'),
   /** 允许跨域的前端地址，多个用英文逗号分隔 */
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
 });

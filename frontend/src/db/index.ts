@@ -9,7 +9,7 @@ export interface SettingRecord {
 
 /**
  * 前端主存储（IndexedDB）。
- * 数据全部留在用户本机，不上传任何服务器。
+ * 本地持久化使用 IndexedDB；聊天请求仍会向配置的后端传送人格与近期上下文。
  * 注意：IndexedDB 不能给布尔值建索引，因此 isActive 不建索引，切换激活用查询完成。
  */
 export class ChatDatabase extends Dexie {

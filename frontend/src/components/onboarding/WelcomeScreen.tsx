@@ -7,7 +7,7 @@ export interface WelcomeScreenProps {
 }
 
 const HIGHLIGHTS = [
-  { emoji: '🔒', text: '聊天记录只存在你自己电脑上，不上传任何服务器' },
+  { emoji: '🔒', text: '聊天记录保存在本机，发送时会向配置的后端传送近期上下文' },
   { emoji: '🎨', text: '全屏 Live2D 角色 + 情绪驱动表情联动' },
   { emoji: '🧩', text: 'OpenAI / DeepSeek / Ollama 等模型自由切换' },
 ];

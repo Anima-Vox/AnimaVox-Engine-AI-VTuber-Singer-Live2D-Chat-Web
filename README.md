@@ -20,8 +20,8 @@
 ---
 
 > **⚠️ 開發階段聲明**
-> 本倉庫目前處於 **Phase 1 開發中**：開源引擎的**前端 MVP 與最小 Mock 後端已完成並可運行**（見下方[快速開始](#-快速開始-quick-start)），
-> 語音管線（GPT-SoVITS TTS / STT）、真實 LLM 適配器、長期記憶與 Live2D 口型同步仍在開發中。
+> 本倉庫目前是**第三版前端與可運行的 Mock 串接骨架**（見下方[快速開始](#-快速開始-quick-start)）。正式後端尚未開工；`backend/` 僅供前端開發、自檢與測試。
+> 真實 LLM、SQLite 儲存與金鑰加密、語音管線（GPT-SoVITS TTS / STT）、長期記憶與 Live2D 口型同步均未實作。下列產品願景與路線圖不代表已完成功能。
 > 歡迎透過 Issue 參與討論，或見下方[招募段落](#-招募同伴我們正在尋找開發夥伴-we-are-hiring)。
 
 ---
@@ -39,17 +39,17 @@
 | 人格 / 音色 / 模型 | 完全開放自訂 | 鎖定，不隨程式碼分發 |
 | 授權 | AGPL-3.0 | 角色資產另立授權，保留一切權利 |
 
-**開源的是引擎，不是佳尹。** 任何人都可以用這套引擎打造自己的虛擬夥伴，資料全部留在本地設備；而李佳尹本人作為官方實例，其人格、聲音與視覺形象由官方維護，確保她始終是她。
+**開源的是引擎，不是佳尹。** 開源引擎以本機儲存為基礎，發送對話仍需將上下文傳給所配置的服務；李佳尹官方實例則規劃由官方維護人格、聲音與視覺形象。
 
 ### Phase 1 範圍
 
-Phase 1 已重新定義，語音能力不再延後至 Phase 2：
+以下為 Phase 1 的目標範圍；目前完成的是 Mock 文字對話與前端流程：
 
-- ✅ **文字對話**為核心，必須在無語音的情況下獨立可用
-- ✅ **LLM** 接入 DeepSeek V4 Pro（OpenAI 相容格式）
-- ✅ **TTS** 可接入李佳尹專屬訓練音色
-- ✅ **STT** 語音輸入
-- ⬜ Live2D 驅動、長期記憶、即時直播順延至 Phase 2 之後
+- ✅ **Mock 文字對話**與前端持久化；文字功能須能獨立使用
+- ⬜ **LLM** 真實廠商適配器（OpenAI 相容格式）
+- ⬜ **TTS** 接入專屬訓練音色
+- ⬜ **STT** 語音輸入
+- ⬜ Live2D 口型同步、長期記憶與即時直播；Live2D 載入及表情切換已有前端實作
 
 **降級原則**：語音模組為可選層。TTS 或 STT 不可用時，文字對話必須照常運作。
 
@@ -57,7 +57,7 @@ Phase 1 已重新定義，語音能力不再延後至 Phase 2：
 
 ## 🌸 角色靈魂檔案 (Persona System)
 
-本專案內建 **雙角色系統**，但兩者定位不同，請留意：
+產品規劃區分以下兩種角色；目前前端內建一份可編輯的羽澄糯範本，尚未實作多角色切換：
 
 ### 🎶 官方角色：李佳尹 (Jayin Li) —— 科技與古典交織的香港千金
 
@@ -129,20 +129,20 @@ Phase 1 已重新定義，語音能力不再延後至 Phase 2：
 
 ### 🛡️ 核心特性
 
-1.  **雙層架構 (Two-Layer Design)**：開源引擎供任何人自備 Key 使用；李佳尹官方實例 100% 運行於官方 API，確保角色一致性與品質。
-2.  **隱私優先 (Local-First)**：聊天紀錄儲存於瀏覽器 `IndexedDB`，並雙寫備份至後端 `SQLite`，絕不上傳第三方伺服器。
-3.  **語音可選 (Voice as Optional Layer)**：TTS / STT 為可插拔模組，任一失效不影響文字對話。李佳尹官方版使用專屬訓練音色。
+1.  **雙層架構 (Two-Layer Design，規劃)**：開源引擎供使用者自備 Key；官方實例使用服務端配置，正式後端開發前需確定各自的部署與資料邊界。
+2.  **本機儲存 (Local-First，已實作)**：聊天、角色與模型配置保存在瀏覽器 `IndexedDB`。發送時會傳輸角色提示詞與最近消息；尚無 SQLite 備份。
+3.  **語音可選 (Voice as Optional Layer，規劃)**：TTS / STT 失效時，文字對話須照常運作。
 4.  **Live2D 沉浸渲染**：整合 `pixi-live2d-display`，支援全螢幕角色展示，AI 返回的 `emotion` 欄位直接驅動模型表情聯動（口型同步順延 Phase 2）。
-5.  **多模型自由切換**：相容 OpenAI API 格式（引擎預設 **DeepSeek V4 Pro**，模型 ID `deepseek-v4-pro`），支援在設定頁配置多組 API URL/Key，一鍵切換不掉上下文。
-6.  **安全代理**：API Key 加密儲存於後端 SQLite，由 Fastify 後端代理發送請求，金鑰不暴露於前端瀏覽器。
+5.  **多模型配置（前端已實作）**：可保存多組 URL / Key / 模型名，使用全域選中的配置；實際對話目前一律為 Mock，尚未呼叫真實廠商。
+6.  **金鑰代理（規劃）**：尚無服務端金鑰儲存或加密。現有配置中的 Key 會明文保存在瀏覽器，當前格式測試無需真實 Key。
 
-> **模型版本注意**：`deepseek-chat` 與 `deepseek-reasoner` 等舊版模型 ID 已於 2026 年 7 月停用，請使用 `deepseek-v4-pro`。
+> 表單中的廠商、網址及模型名目前是配置範例。接入真實廠商前，須依其官方文件確認可用模型與協定。
 
 ### 💻 技術棧 (Tech Stack)
 
 **已實作（本分支可運行）**
 *   **Frontend**: React 18 + Vite + TypeScript + Tailwind CSS + Zustand + Dexie.js (IndexedDB) + PixiJS / pixi-live2d-display
-*   **Backend**: Node.js + Fastify + TypeScript（當前為 Mock 適配器，真實廠商待接入）
+*   **Mock 骨架**: Node.js + Fastify + TypeScript（健康檢查、Mock 對話與配置格式測試；正式後端未開工）
 *   **Shared**: Zod（前後端共用 schema，位於 `packages/shared`）
 *   **測試**: Vitest（單元測試）+ Playwright（E2E，1280×720 / 1920×1080）
 
@@ -157,26 +157,26 @@ Phase 1 已重新定義，語音能力不再延後至 Phase 2：
 **环境要求**：Node.js ≥ 20、npm ≥ 10（开发环境实测 Node 24 / npm 11）。
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
-浏览器打开 <http://localhost:5173>，会先看到欢迎页，跟着 3 步向导走完就能开聊。后端默认跑在 <http://localhost:3001>。
+浏览器打开 <http://localhost:5173>，会先看到欢迎页，跟着 3 步向导走完即可体验 Mock 对话。Mock 骨架默认跑在 <http://localhost:3001>。
 
 > 手上暂时没有 API Key 也没关系：向导第 1 步的厂商选 **Mock（离线演示）**，不需要任何 Key，就能把完整链路跑通。
 
 ### 首次配置（3 步向导）
 
-1. **配置模型** —— 选厂商（会自动带上默认 API 地址与模型名）→ 填 API Key → 点「测试连接」。
+1. **配置模型** —— 建议先选 Mock → 点「测试连接」。其他厂商当前只校验配置格式，无需填写真实 API Key。
    **测试不通过就不能进入下一步**，整个向导没有任何跳过入口。
 2. **确认角色** —— 内置示例角色「羽澄糯」，名字、性格、语气、背景、口头禅、禁忌话题都可以直接改。
 3. **导入角色外观** —— 三选一：先用占位插画 / 从本地目录自动探测 / 填模型 URL。
 
 之后每次打开都会直接进入聊天界面；想重走向导可以在「设置 → 偏好」里点「重新运行首次引导」。
 
-### 支持的 LLM
+### LLM 配置预设（真实调用待接入）
 
-全部走 OpenAI 兼容格式，在「设置 → 模型」里可以并存多条配置并一键切换：
+预留 OpenAI 兼容格式，在「设置 → 模型」里可以保存多条配置并切换全局选择；以下预设不代表当前已能调用：
 
 | 厂商 | 默认地址 | 默认模型 | 备注 |
 | --- | --- | --- | --- |
@@ -189,18 +189,18 @@ npm run dev
 | Mock | `mock://local` | `mock` | 离线演示，用于跑通链路与开发调试 |
 | 自定义 | 自行填写 | 自行填写 | 任何 OpenAI 兼容接口 |
 
-> 当前版本后端只提供 Mock 适配器，除 Mock 外的厂商在「测试连接」里做的是**配置格式与后端连通性校验**，真实厂商调用会在 LLM 适配器接入后启用（见下方 Roadmap）。
+> **测试含义**：`mock` 会运行本地 Mock 对话；`format-only` 只验证配置格式与 Mock 骨架连通性，不验证真实 Key、模型权限或厂商可达性，也不发送真实 Key。当前没有 `live` 测试或真实 LLM 调用。
 
 ### Live2D 模型
 
 **仓库不内置任何模型文件**，模型版权由使用者自行承担。三种加载方式：
 
 1. **占位插画**（默认）—— 一张内联 SVG 手绘插画，零网络请求、零版权风险，界面功能完全可用。
-2. **本地目录自动探测** —— 把模型文件夹放进 `frontend/public/models/`，应用会读取构建期生成的清单并自动加载第一个找到的 `*.model3.json` / `*.model.json`。
+2. **本地目录自动探测** —— 把 Cubism 3/4 模型文件夹放进 `frontend/public/models/`，应用会读取构建期生成的清单并自动加载第一个找到的 `*.model3.json`。旧版 `*.model.json` 不受支持。
    > 该目录已在 `.gitignore` 中，模型文件不会被提交。
 3. **填写模型 URL** —— 支持 CDN / GitHub Raw 等远程地址。
 
-Cubism 4/5 模型需要 Live2D 官方 Core 运行时。它不随本仓库分发，默认从 Live2D 官方 CDN 加载，可以用 `VITE_CUBISM_CORE_URL` 指向自托管地址（离线 / 内网场景）。
+Cubism 3/4 模型需要 Live2D 官方 Core 运行时。它不随本仓库分发，默认从 Live2D 官方 CDN 加载，可以用 `VITE_CUBISM_CORE_URL` 指向自托管地址（离线 / 内网场景）。
 
 **情绪驱动表情**：LLM 返回的 `emotion` 会被映射到模型表情。策略是「先按表情名精确匹配，匹配不到则按情绪稳定轮换下标」——因为真实模型的表情名往往是 `F01`/`f00` 这种，按语义名匹配必然落空。同一情绪永远命中同一个表情，不会乱跳。模型加载失败会自动回落到占位插画。
 
@@ -218,24 +218,26 @@ Cubism 4/5 模型需要 Live2D 官方 Core 运行时。它不随本仓库分发�
 | 变量 | 默认值 | 说明 |
 | --- | --- | --- |
 | `PORT` | `3001` | 监听端口 |
-| `HOST` | `0.0.0.0` | 监听地址 |
+| `HOST` | `127.0.0.1` | 默认只监听本机 |
 | `NODE_ENV` | `development` | 决定日志格式 |
-| `LLM_MODE` | `mock` | `mock` / `live` |
+| `LLM_MODE` | `mock` | 当前只接受 `mock`；真实适配器尚未实现 |
 | `CORS_ORIGIN` | `http://localhost:5173` | 允许的前端来源，多个用逗号分隔 |
 
 ### 常用命令
 
 ```bash
-npm run dev          # 同时启动前端(5173) 与后端(3001)
+npm run dev          # 同时启动前端(5173) 与 Mock 骨架(3001)
 npm run build        # 构建前端，产物在 frontend/dist
 npm run typecheck    # 全项目 TS 严格模式检查
 npm run lint         # ESLint
 npm run test         # Vitest 单元测试
-npm run test:e2e     # Playwright 端到端测试（需先 npm run dev）
+npm run test:e2e     # Playwright 端到端测试，自动启动开发服务
 npm run format       # Prettier 格式化
 ```
 
-E2E 默认覆盖 Chrome 的 1280×720 与 1920×1080 两个分辨率。想跑 Firefox / Safari 兼容性：
+首次运行 E2E 前安装浏览器：`npx playwright install chromium`。新成员先运行 `npm run typecheck`、`npm run lint`、`npm test`、`npm run build`，再运行 `npm run test:e2e` 验证首次引导与 Mock 对话。
+
+E2E 默认覆盖 Chromium 的 1280×720 与 1920×1080 两个分辨率。想跑 Firefox / Safari 兼容性：
 
 ```bash
 npx playwright install firefox webkit
@@ -261,14 +263,23 @@ Web chat/
 │       ├── services/         # HTTP 客户端、对话 API、模型测试、Live2D 运行时与控制器
 │       ├── utils/            # 情绪映射、System Prompt 拼接、时间格式化等
 │       └── constants/        # 默认角色、provider 预设、设置项 key
-├── backend/                  # Fastify（当前为 Mock 适配器）
+├── backend/                  # Fastify Mock 串接骨架，正式后端未开工
 └── playwright.config.ts      # E2E 配置（1280×720 / 1920×1080 两个分辨率）
 ```
 
+### 后端接手边界
+
+- `frontend/src/services/httpClient.ts` 统一读取 `VITE_API_URL`；`chatApi.ts`、`modelApi.ts` 分别封装对话与配置测试，组件无需直接调用 HTTP。
+- `packages/shared/src/schemas/` 是当前请求与响应的 Zod 契约。现有接口仅有健康检查、Mock 对话和配置格式测试，没有模型注册、会话同步或记忆服务。
+- 当前由 `systemPrompt.ts` 在前端组装人格提示词与最近 N 条消息，再由 `chatStore.ts` 发送；模型选择是全局的，切换会话不会恢复各自模型。配置 ID 来自本机 IndexedDB，Mock 骨架尚未解析这些 ID。
+- 对话已预留可选 `clientMessageId`，并保留响应的消息 ID 与时间；它们不代表服务端已实现幂等或同步。请求可传入取消信号，当前仍为一次性 JSON 响应，尚无 SSE。
+- 开始正式后端前，先共同确定模型配置注册与密钥归属、上下文由谁维护及其版本、消息 ID / 幂等规则和错误契约，再接一个真实文字对话适配器。SQLite 双写、记忆、语音与工具执行均为后续工作，不在本次前端整理中实现。
+
 ### 数据与隐私
 
-- 所有数据保存在本机 IndexedDB（`ai-live2d-chat`），**不上传到任何服务器**。
-- **导出聊天记录**：设置 → 偏好 → 导出。JSON 是完整备份（含角色设定与全部消息），Markdown 便于阅读分享；导出全程在浏览器本地完成。
+- 聊天、角色和模型配置保存在本机 IndexedDB（`ai-live2d-chat`）。发送对话时，角色提示词与最近消息会传到 `VITE_API_URL` 所指定的服务；当前服务只返回 Mock，不调用第三方 LLM。
+- API Key 字段目前仅为后续接入保留，无需填写真实 Key。若填写并保存，它会明文存于浏览器；浏览器存储不提供密钥保密保证。当前格式测试不会发送真实 Key，后续真实调用前须明确密钥存储与传输策略。
+- **导出聊天记录**：设置 → 偏好 → 导出。JSON 包含当前角色设定与全部会话消息，不含模型配置或界面设置，当前尚无导入恢复功能；Markdown 便于阅读分享。导出全程在浏览器本地完成。
 - 「设置 → 偏好 → 清空本地数据」可以一键重置到首次使用状态。
 - 自检页 `/diagnostics` 提供了链路、渲染依赖、持久化、数据重置的检查项，用于排查环境问题。
 
@@ -278,7 +289,7 @@ Web chat/
 
 - 3 步首屏引导 + 测试连接强制门禁
 - 多 LLM 配置管理与切换、角色人格自定义
-- 完整对话链路（结构化 JSON：`emotion` / `action` / `expression` / `text`）
+- Mock 对话链路（结构化 JSON：`emotion` / `action` / `expression` / `text`）
 - IndexedDB 持久化、会话管理（新建 / 切换 / 删除）、聊天记录导出（JSON / Markdown）
 - Live2D 渲染、三种模型加载方式、情绪驱动表情、加载失败降级
 - 单测（Vitest）、E2E（Playwright）、骨架自检页
@@ -312,7 +323,7 @@ Web chat/
 
 ### 🛠️ 2. 後端 / AI 整合工程師 (Back-End / AI Developer)
 
-**負責範圍：** 維護本地微服務器，穩定 LLM API 請求與本地資料庫，為後續語音管線鋪路。
+**負責範圍：** 從現有 Mock 契約開始建立正式後端，實作 LLM API、資料儲存與安全邊界，為後續語音管線鋪路。
 
 - 熟練掌握 **Node.js** 與 **TypeScript**。
 - 熟悉 **Fastify** 或 Express/Koa 框架，了解 RESTful API 設計。

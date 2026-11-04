@@ -1,7 +1,7 @@
 import * as PIXI from 'pixi.js';
 
 /**
- * Live2D Cubism Core 运行时（Cubism 4/5 模型必需）。
+ * Live2D Cubism Core 运行时（通过 cubism4 入口加载 Cubism 3/4 的 .model3.json）。
  * 该文件属于 Live2D 官方运行时，不随本仓库分发：
  * 默认从官方 CDN 加载，可通过 VITE_CUBISM_CORE_URL 指向自托管地址（离线 / 内网场景）。
  */

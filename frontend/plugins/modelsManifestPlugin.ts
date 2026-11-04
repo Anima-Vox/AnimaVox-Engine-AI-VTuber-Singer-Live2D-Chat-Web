@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { Plugin } from 'vite';
 
-const MODEL_FILE_PATTERN = /\.model3?\.json$/i;
+const MODEL_FILE_PATTERN = /\.model3\.json$/i;
 const MANIFEST_ROUTE = '/models/manifest.json';
 
 function collectModelFiles(dir: string, root: string, acc: string[] = []): string[] {

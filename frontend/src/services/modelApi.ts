@@ -1,4 +1,9 @@
-import { ModelTestResponseSchema, type ModelConfigDraft, type ModelTestResponse } from '@shared';
+import {
+  ModelTestRequestSchema,
+  ModelTestResponseSchema,
+  type ModelConfigDraft,
+  type ModelTestResponse,
+} from '@shared';
 import { HTTPError } from 'ky';
 import { httpClient } from './httpClient';
 
@@ -8,7 +13,8 @@ import { httpClient } from './httpClient';
  */
 export async function testModelConnection(draft: ModelConfigDraft): Promise<ModelTestResponse> {
   try {
-    const payload: unknown = await httpClient.post('api/models/test', { json: draft }).json();
+    const config = ModelTestRequestSchema.parse(draft);
+    const payload: unknown = await httpClient.post('api/models/test', { json: config }).json();
     return ModelTestResponseSchema.parse(payload);
   } catch (cause) {
     if (cause instanceof HTTPError) {

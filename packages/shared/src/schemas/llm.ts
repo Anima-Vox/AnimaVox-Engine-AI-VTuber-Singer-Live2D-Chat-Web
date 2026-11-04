@@ -32,6 +32,8 @@ export const LLMResponseSchema = z.object({
 export const ChatRequestSchema = z.object({
   conversationId: z.string().min(1),
   modelConfigId: z.string().min(1),
+  /** 客户端用户消息 ID；正式后端可用它关联请求并实现幂等。Mock 不保证幂等。 */
+  clientMessageId: z.string().min(1).optional(),
   messages: z.array(ChatContextMessageSchema).min(1),
 });
 

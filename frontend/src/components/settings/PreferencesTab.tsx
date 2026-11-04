@@ -130,7 +130,8 @@ export function PreferencesTab() {
       <section className="rounded-panel bg-white/55 p-4">
         <h3 className="text-sm text-ink-deep">导出聊天记录</h3>
         <p className="mt-2 text-[11px] leading-relaxed text-ink-soft">
-          导出在浏览器本地完成，不经过任何服务器。JSON 是完整备份（含角色设定），Markdown
+          导出在浏览器本地完成。JSON
+          包含当前角色与会话消息，不含模型配置或界面设置，尚不支持导入恢复；Markdown
           便于阅读与分享。
         </p>
 
@@ -163,8 +164,8 @@ export function PreferencesTab() {
       <section className="rounded-panel border border-pink/40 bg-white/45 p-4">
         <h3 className="text-sm text-ink-deep">数据与隐私</h3>
         <p className="mt-2 text-[11px] leading-relaxed text-ink-soft">
-          聊天记录、角色设定、模型配置全部保存在本机 IndexedDB，不上传任何服务器。 API Key
-          也只在本地与你自己配置的后端之间流转。
+          聊天记录、角色设定和模型配置保存在本机。发送消息时，角色设定与最近消息会传给所配置的服务，当前回复为
+          Mock。 已填写的 API Key 会明文保存在浏览器；当前格式校验不需要也不会发送真实 Key。
         </p>
 
         {pendingReset ? (
@@ -205,7 +206,7 @@ export function PreferencesTab() {
       <p className="text-center text-[10px] leading-relaxed text-ink-soft/80">
         Ai-Live2D Chat v0.1.0 · AGPL-3.0
         <br />
-        所有数据保存在本地，不上传到任何服务器
+        记录保存在本机，发送消息时会传输上下文
       </p>
     </div>
   );

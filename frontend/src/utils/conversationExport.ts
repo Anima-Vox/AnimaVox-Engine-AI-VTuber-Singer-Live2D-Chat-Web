@@ -2,7 +2,7 @@ import type { Character, Conversation, Message } from '@shared';
 import { resolveEmotion } from './emotion';
 import { formatMessageTime } from './time';
 
-/** 导出文件的整体结构：一份完整的本地备份 */
+/** 聊天导出结构：当前角色与会话消息，不含模型配置或 UI 设置。 */
 export interface ConversationExport {
   app: 'Ai-Live2D Chat';
   version: string;

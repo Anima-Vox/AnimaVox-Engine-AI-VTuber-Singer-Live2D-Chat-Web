@@ -6,7 +6,7 @@ export const LLMProviderSchema = z.enum(LLM_PROVIDERS);
 /**
  * LLM 模型配置（可配置多条，isActive 标记当前在用）
  * 注意：apiKey 在前端为明文（存于用户自己的浏览器），
- * 落到后端 SQLite 时由后端加密为 api_key_encrypted 列。
+ * 后端 SQLite 加密存储属于规划，当前 Mock 骨架尚未实现。
  */
 export const ModelConfigSchema = z.object({
   id: z.string().min(1),
@@ -24,6 +24,9 @@ export const ModelConfigDraftSchema = ModelConfigSchema.omit({
   createdAt: true,
   isActive: true,
 });
+
+/** 当前测试接口只做格式校验，不接收供应商密钥。真实连通测试由正式后端另行实现。 */
+export const ModelTestRequestSchema = ModelConfigDraftSchema.omit({ apiKey: true });
 
 /** POST /api/models/test 响应体 */
 export const ModelTestResponseSchema = z.object({

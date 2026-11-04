@@ -67,8 +67,14 @@ export function AppShell() {
             <ChatDock
               onSend={(text) => void sendMessage(text)}
               sending={status === 'sending'}
-              disabled={missingModel}
-              disabledHint={missingModel ? '配置模型后才能开始对话' : undefined}
+              disabled={missingModel || status === 'creating'}
+              disabledHint={
+                missingModel
+                  ? '配置模型后才能开始对话'
+                  : status === 'creating'
+                    ? '正在创建会话…'
+                    : undefined
+              }
               placeholder={`和${characterName}说点什么…`}
             />
           </div>

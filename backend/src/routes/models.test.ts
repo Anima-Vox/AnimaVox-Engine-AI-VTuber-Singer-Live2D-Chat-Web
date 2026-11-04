@@ -58,22 +58,21 @@ describe('POST /api/models/test', () => {
     expect(body.mode).toBe('format-only');
   });
 
-  it('缺少 API Key 时不通过（向导门禁会拦住）', async () => {
+  it('格式校验无需供应商密钥，也不表示真实连接通过', async () => {
     const response = await app.inject({
       method: 'POST',
       url: '/api/models/test',
       payload: {
         provider: 'deepseek',
         apiUrl: 'https://api.deepseek.com/v1',
-        apiKey: '',
         modelName: 'deepseek-v4-pro',
         contextWindow: 20,
       },
     });
 
     const body = response.json();
-    expect(body.ok).toBe(false);
-    expect(body.message).toContain('API Key');
+    expect(body.ok).toBe(true);
+    expect(body.mode).toBe('format-only');
   });
 
   it('API 地址不是 http(s) 时不通过', async () => {

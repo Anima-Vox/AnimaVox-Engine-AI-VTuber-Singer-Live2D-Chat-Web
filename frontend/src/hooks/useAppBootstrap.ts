@@ -13,11 +13,15 @@ import { useUiStore, type AppView } from '../stores/uiStore';
  * 1) 从 IndexedDB 恢复角色 / 模型配置 / 会话 / UI 偏好 / Live2D 模型设置；
  * 2) 决定初始视图 —— 没有可用模型时强制回到引导流程（清空配置后必须重走向导）。
  */
-export function useAppBootstrap(): boolean {
+export function useAppBootstrap(): { ready: boolean; error: string | null; retry: () => void } {
   const [ready, setReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    setReady(false);
+    setError(null);
 
     void (async () => {
       await Promise.all([
@@ -26,6 +30,12 @@ export function useAppBootstrap(): boolean {
         useChatStore.getState().load(),
         useUiStore.getState().hydrate(),
       ]);
+
+      const loadError =
+        useCharacterStore.getState().error ||
+        useModelStore.getState().error ||
+        useChatStore.getState().error;
+      if (loadError) throw new Error(loadError);
 
       const [activeConfig, onboardingStarted, live2dSourceRaw] = await Promise.all([
         getActiveModelConfig(),
@@ -50,12 +60,16 @@ export function useAppBootstrap(): boolean {
 
       useUiStore.getState().setView(view);
       setReady(true);
-    })();
+    })().catch((cause: unknown) => {
+      if (!cancelled) {
+        setError(cause instanceof Error ? cause.message : String(cause));
+      }
+    });
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [attempt]);
 
-  return ready;
+  return { ready, error, retry: () => setAttempt((value) => value + 1) };
 }

@@ -21,7 +21,7 @@ interface Live2dState {
   modelError: string | null;
   /** 实际应用到模型上的表情名，便于界面反馈与排查 */
   appliedExpression: string | null;
-  /** 自增令牌：变化时强制重新加载同一个模型（「重新加载」按钮用） */
+  /** 自增令牌：重新解析目录清单并重新加载模型，空目录时同样可重试 */
   reloadToken: number;
   /** 由 LLM 返回值驱动表情/动作切换；模型显式给出的 expression/action 优先，缺省则按 emotion 推导 */
   setEmotion: (emotion: string, explicit?: { expression?: string; action?: string }) => void;

@@ -142,7 +142,12 @@ export function resolveEmotion(raw: string | null | undefined): EmotionVisual {
   }
 
   const trimmed = raw.trim();
-  const key = SYNONYMS[trimmed.toLowerCase()] ?? SYNONYMS[trimmed];
+  const normalized = trimmed.toLowerCase();
+  const key = Object.hasOwn(SYNONYMS, normalized)
+    ? SYNONYMS[normalized]
+    : Object.hasOwn(SYNONYMS, trimmed)
+      ? SYNONYMS[trimmed]
+      : undefined;
 
   return key ? TABLE[key] : TABLE.neutral;
 }

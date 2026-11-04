@@ -17,6 +17,7 @@ export interface ResolvedModel {
 export function useResolvedModelUrl(): ResolvedModel {
   const source = useLive2dStore((state) => state.source);
   const modelPath = useLive2dStore((state) => state.modelPath);
+  const reloadToken = useLive2dStore((state) => state.reloadToken);
   const [resolved, setResolved] = useState<ResolvedModel>({ url: null, status: 'resolving' });
 
   useEffect(() => {
@@ -48,7 +49,7 @@ export function useResolvedModelUrl(): ResolvedModel {
     return () => {
       cancelled = true;
     };
-  }, [source, modelPath]);
+  }, [source, modelPath, reloadToken]);
 
   return resolved;
 }

@@ -100,7 +100,7 @@ export function ChatDock({
       </div>
 
       <p className="text-center text-[10px] text-ink-soft/70">
-        Enter 发送 · Shift + Enter 换行 · 数据仅保存在本地
+        Enter 发送 · Shift + Enter 换行 · 发送时会传输上下文
       </p>
     </div>
   );

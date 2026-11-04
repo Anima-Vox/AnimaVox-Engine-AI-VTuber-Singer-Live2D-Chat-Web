@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { LLM_PROVIDER_PRESETS, type ModelConfig, type ModelConfigDraft } from '@shared';
 import { testModelConnection } from '../../services/modelApi';
 import { LlmStep, type ConnectionTestState } from '../onboarding/steps/LlmStep';
@@ -36,16 +36,20 @@ export function ModelConfigEditor({ initial, onSubmit, onCancel }: ModelConfigEd
   const [testState, setTestState] = useState<ConnectionTestState>({ status: 'idle', message: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const testVersion = useRef(0);
 
   const patch = useCallback((changes: Partial<ModelConfigDraft>) => {
+    testVersion.current += 1;
     setDraft((previous) => ({ ...previous, ...changes }));
     setTestState({ status: 'idle', message: '' });
   }, []);
 
   const runTest = useCallback(async () => {
+    const version = ++testVersion.current;
     setTestState({ status: 'testing', message: '' });
     try {
       const result = await testModelConnection(draft);
+      if (version !== testVersion.current) return;
       setTestState({
         status: result.ok ? 'ok' : 'fail',
         message:
@@ -54,6 +58,7 @@ export function ModelConfigEditor({ initial, onSubmit, onCancel }: ModelConfigEd
             : `${result.message}（${result.latencyMs} ms）`,
       });
     } catch (cause) {
+      if (version !== testVersion.current) return;
       setTestState({
         status: 'fail',
         message: cause instanceof Error ? cause.message : String(cause),

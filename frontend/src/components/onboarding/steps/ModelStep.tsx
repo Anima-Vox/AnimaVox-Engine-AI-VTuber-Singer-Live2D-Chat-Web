@@ -69,7 +69,7 @@ export function ModelStep({ source, onSourceChange, modelUrl, onModelUrlChange }
       {source === 'url' ? (
         <TextField
           label="模型地址"
-          hint="指向 .model3.json / .model.json"
+          hint="指向 Cubism 3/4 的 .model3.json（不支持旧版 .model.json）"
           value={modelUrl}
           onChange={(event) => onModelUrlChange(event.target.value)}
           placeholder="https://example.com/model/xxx.model3.json"

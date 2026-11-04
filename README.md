@@ -20,7 +20,7 @@
 ---
 
 > **⚠️ 開發階段聲明**
-> 本倉庫目前是**第三版前端與可運行的 Mock 串接骨架**（見下方[快速開始](#-快速開始-quick-start)）。正式後端尚未開工；`backend/` 僅供前端開發、自檢與測試。
+> 本倉庫目前是**第三版前端（第三改版第一定稿）與可運行的 Mock 串接骨架**（見下方[快速開始](#-快速開始-quick-start)）。正式後端尚未開工；`backend/` 僅供前端開發、自檢與測試。第三版前端的範圍與交接說明見 [frontend/README.md](frontend/README.md)。
 > 真實 LLM、SQLite 儲存與金鑰加密、語音管線（GPT-SoVITS TTS / STT）、長期記憶與 Live2D 口型同步均未實作。下列產品願景與路線圖不代表已完成功能。
 > 歡迎透過 Issue 參與討論，或見下方[招募段落](#-招募同伴我們正在尋找開發夥伴-we-are-hiring)。
 
@@ -134,7 +134,7 @@ Phase 1 已重新定義，語音能力不再延後至 Phase 2：
 3.  **語音可選 (Voice as Optional Layer)**：TTS / STT 為可插拔模組，任一失效不影響文字對話。李佳尹官方版使用專屬訓練音色。
 4.  **Live2D 沉浸渲染**：整合 `pixi-live2d-display`，支援全螢幕角色展示，AI 返回的 `emotion` 欄位直接驅動模型表情聯動（口型同步順延 Phase 2）。
 5.  **多模型自由切換**：相容 OpenAI API 格式（引擎預設 **DeepSeek V4 Pro**，模型 ID `deepseek-v4-pro`），支援在設定頁配置多組 API URL/Key，一鍵切換不掉上下文。
-6.  **金鑰代理（規劃）**：尚無服務端金鑰儲存或加密。現有配置中的 Key 會明文保存在瀏覽器，當前格式測試無需真實 Key。
+6.  **金鑰代理（規劃）**：尚無服務端金鑰儲存或加密。需要 Key 的供應商必須在設定中填寫 API Key；Key 以明文保存在瀏覽器，目前只在本機檢查是否已填寫，不會發送。
 
 > **模型版本注意**：`deepseek-chat` 與 `deepseek-reasoner` 等舊版模型 ID 已於 2026 年 7 月停用，請使用 `deepseek-v4-pro`。
 
@@ -144,7 +144,7 @@ Phase 1 已重新定義，語音能力不再延後至 Phase 2：
 *   **Frontend**: React 18 + Vite + TypeScript + Tailwind CSS + Zustand + Dexie.js (IndexedDB) + PixiJS / pixi-live2d-display
 *   **Mock 骨架**: Node.js + Fastify + TypeScript（健康檢查、Mock 對話與配置格式測試；正式後端未開工）
 *   **Shared**: Zod（前後端共用 schema，位於 `packages/shared`）
-*   **測試**: Vitest（單元測試）+ Playwright（E2E，1280×720 / 1920×1080）
+*   **測試**: Vitest（單元測試）+ Playwright（E2E，1280×720 / 1920×1080；第三版前端的 E2E 以模擬接口驗收，不需啟動後端）
 
 **規劃導入**
 *   **Backend**: Drizzle ORM + SQLite 雙寫、真實 LLM 適配器（DeepSeek V4 Pro）、內容安全中間件
@@ -163,11 +163,13 @@ npm run dev
 
 浏览器打开 <http://localhost:5173>，会先看到欢迎页，跟着 3 步向导走完即可体验 Mock 对话。Mock 骨架默认跑在 <http://localhost:3001>。
 
+只看前端界面时可以用 `npm run dev -w frontend`（不启动 Mock 骨架；这时聊天收不到回复，需要可用的对话服务）。
+
 > 手上暂时没有 API Key 也没关系：向导第 1 步的厂商选 **Mock（离线演示）**，不需要任何 Key，就能把完整链路跑通。
 
 ### 首次配置（3 步向导）
 
-1. **配置模型** —— 建议先选 Mock → 点「测试连接」。其他厂商当前只校验配置格式，无需填写真实 API Key。
+1. **配置模型** —— 建议先选 Mock → 点「测试连接」（向 Mock 骨架发一次测试对话）。其他厂商目前只在浏览器本机检查格式：API 地址、模型名，以及需要 Key 的厂商是否已填写 API Key（必填，只保存在本机，不会发送）；不联网，也不代表厂商真的可用。
    **测试不通过就不能进入下一步**，整个向导没有任何跳过入口。
 2. **确认角色** —— 内置示例角色「羽澄糯」，名字、性格、语气、背景、口头禅、禁忌话题都可以直接改。
 3. **导入角色外观** —— 三选一：先用占位插画 / 从本地目录自动探测 / 填模型 URL。
@@ -189,7 +191,7 @@ npm run dev
 | Mock | `mock://local` | `mock` | 离线演示，用于跑通链路与开发调试 |
 | 自定义 | 自行填写 | 自行填写 | 任何 OpenAI 兼容接口 |
 
-> **测试含义**：`mock` 会运行本地 Mock 对话；`format-only` 只验证配置格式与 Mock 骨架连通性，不验证真实 Key、模型权限或厂商可达性，也不发送真实 Key。当前没有 `live` 测试或真实 LLM 调用。
+> **测试含义**：`mock` 会向 Mock 骨架（`/api/models/test`）跑一次 Mock 对话；其他厂商返回 `format-only`，只在浏览器本机检查格式与 Key 是否已填写，不联网、不发送 Key，也不验证 Key 是否有效、模型权限或厂商可达性。当前没有真实 LLM 调用。
 
 ### Live2D 模型
 
@@ -226,16 +228,20 @@ Cubism 3/4 模型需要 Live2D 官方 Core 运行时。它不随本仓库分发�
 ### 常用命令
 
 ```bash
-npm run dev          # 同时启动前端(5173) 与 Mock 骨架(3001)
-npm run build        # 构建前端，产物在 frontend/dist
-npm run typecheck    # 全项目 TS 严格模式检查
-npm run lint         # ESLint
-npm run test         # Vitest 单元测试
-npm run test:e2e     # Playwright 端到端测试，自动启动开发服务
-npm run format       # Prettier 格式化
+npm run dev              # 同时启动前端(5173) 与 Mock 骨架(3001)
+npm run dev -w frontend  # 只启动前端
+npm run build            # 构建前端，产物在 frontend/dist
+npm run typecheck        # 全项目 TS 严格模式检查
+npm run lint             # ESLint
+npm run test             # Vitest 单元测试（前端 + Mock 骨架）
+npx playwright test -c frontend/playwright.config.ts  # 第三版前端 E2E（接口由测试模拟，只启动前端）
+npm run test:e2e         # 旧版 E2E 配置（同时启动前端与 Mock 骨架）
+npm run format           # Prettier 格式化
 ```
 
-首次运行 E2E 前安装浏览器：`npx playwright install chromium`。新成员先运行 `npm run typecheck`、`npm run lint`、`npm test`、`npm run build`，再运行 `npm run test:e2e` 验证首次引导与 Mock 对话。
+首次运行 E2E 前安装浏览器：`npx playwright install chromium`。新成员先运行 `npm run typecheck`、`npm run lint`、`npm test`、`npm run build`，再运行第三版前端 E2E，验证首次引导、Mock 对话与导出。
+
+> 已知情况：部分无头浏览器环境会把含中文的下载文件名改成 `download`，导致「导出 Markdown」测试失败；应用交给浏览器的文件名本身是正确的。
 
 E2E 默认覆盖 Chromium 的 1280×720 与 1920×1080 两个分辨率。想跑 Firefox / Safari 兼容性：
 
@@ -253,24 +259,26 @@ npx playwright test
 ```
 Web chat/
 ├── packages/shared/          # 前后端共享的 Zod schema 与类型（LLM 契约、角色、会话、模型配置）
-├── frontend/                 # React 18 + Vite + Tailwind
+├── frontend/                 # 第三版前端：React 18 + Vite + Tailwind（说明见 frontend/README.md）
 │   ├── plugins/              # 构建期插件（生成 public/models 清单）
-│   ├── e2e/                  # Playwright 端到端测试
+│   ├── e2e/                  # Playwright 端到端测试（接口由测试模拟）
+│   ├── playwright.config.ts  # 第三版 E2E 配置（只启动前端）
 │   └── src/
 │       ├── components/       # chat / live2d / settings / onboarding / layout / common / diagnostics
 │       ├── stores/           # Zustand：ui / chat / character / model / live2d
 │       ├── db/               # Dexie(IndexedDB) schema 与各实体仓储
-│       ├── services/         # HTTP 客户端、对话 API、模型测试、Live2D 运行时与控制器
-│       ├── utils/            # 情绪映射、System Prompt 拼接、时间格式化等
-│       └── constants/        # 默认角色、provider 预设、设置项 key
+│       ├── services/         # HTTP 客户端、对话 API、模型配置校验、Live2D 运行时与控制器
+│       ├── hooks/            # 启动流程、Live2D 模型地址解析
+│       ├── utils/            # 情绪映射、System Prompt 拼接、导出、时间格式化等
+│       └── constants/        # 默认角色、设置项 key
 ├── backend/                  # Fastify Mock 串接骨架，正式后端未开工
-└── playwright.config.ts      # E2E 配置（1280×720 / 1920×1080 两个分辨率）
+└── playwright.config.ts      # 旧版 E2E 配置（同时启动前端与 Mock 骨架）
 ```
 
 ### 后端接手边界
 
-- `frontend/src/services/httpClient.ts` 统一读取 `VITE_API_URL`；`chatApi.ts`、`modelApi.ts` 分别封装对话与配置测试，组件无需直接调用 HTTP。
-- `packages/shared/src/schemas/` 是当前请求与响应的 Zod 契约。现有接口仅有健康检查、Mock 对话和配置格式测试，没有模型注册、会话同步或记忆服务。
+- `frontend/src/services/httpClient.ts` 统一读取 `VITE_API_URL`；`chatApi.ts` 封装对话请求，`modelApi.ts` 负责模型配置校验（Mock 向 `/api/models/test` 请求，其他厂商只在本机检查格式与 Key 是否已填写），组件无需直接调用 HTTP。
+- `packages/shared/src/schemas/` 是当前请求与响应的 Zod 契约。现有接口仅有健康检查、Mock 对话和 Mock 配置测试，没有模型注册、会话同步或记忆服务。
 - 当前由 `systemPrompt.ts` 在前端组装人格提示词与最近 N 条消息，再由 `chatStore.ts` 发送；模型选择是全局的，切换会话不会恢复各自模型。配置 ID 来自本机 IndexedDB，Mock 骨架尚未解析这些 ID。
 - 对话已预留可选 `clientMessageId`，并保留响应的消息 ID 与时间；它们不代表服务端已实现幂等或同步。请求可传入取消信号，当前仍为一次性 JSON 响应，尚无 SSE。
 - 开始正式后端前，先共同确定模型配置注册与密钥归属、上下文由谁维护及其版本、消息 ID / 幂等规则和错误契约，再接一个真实文字对话适配器。SQLite 双写、记忆、语音与工具执行均为后续工作，不在本次前端整理中实现。
@@ -278,25 +286,27 @@ Web chat/
 ### 数据与隐私
 
 - 聊天、角色和模型配置保存在本机 IndexedDB（`ai-live2d-chat`）。发送对话时，角色提示词与最近消息会传到 `VITE_API_URL` 所指定的服务；当前服务只返回 Mock，不调用第三方 LLM。
-- API Key 字段目前仅为后续接入保留，无需填写真实 Key。若填写并保存，它会明文存于浏览器；浏览器存储不提供密钥保密保证。当前格式测试不会发送真实 Key，后续真实调用前须明确密钥存储与传输策略。
+- 需要 Key 的厂商必须填写 API Key。Key 以明文保存在浏览器（浏览器存储不提供密钥保密保证），目前只在本机检查是否已填写，不会发送到任何服务；后续真实调用前须明确密钥存储与传输策略。
 - **导出聊天记录**：设置 → 偏好 → 导出。JSON 包含当前角色设定与全部会话消息，不含模型配置或界面设置，当前尚无导入恢复功能；Markdown 便于阅读分享。导出全程在浏览器本地完成。
 - 「设置 → 偏好 → 清空本地数据」可以一键重置到首次使用状态。
 - 自检页 `/diagnostics` 提供了链路、渲染依赖、持久化、数据重置的检查项，用于排查环境问题。
 
 ### Roadmap
 
-**已完成（Phase 1 前端）**
+**已完成（Phase 1 前端 · 第三版前端，第三改版第一定稿）**
 
-- 3 步首屏引导 + 测试连接强制门禁
+- 3 步首屏引导 + 测试连接强制门禁（需要 Key 的厂商必须填写 Key）
 - 多 LLM 配置管理与切换、角色人格自定义
-- Mock 对话链路（结构化 JSON：`emotion` / `action` / `expression` / `text`）
-- IndexedDB 持久化、会话管理（新建 / 切换 / 删除）、聊天记录导出（JSON / Markdown）
-- Live2D 渲染、三种模型加载方式、情绪驱动表情、加载失败降级
-- 单测（Vitest）、E2E（Playwright）、骨架自检页
+- Mock 对话链路（结构化 JSON：`emotion` / `action` / `expression` / `text`）；同一时间只有一个发送请求，切换或删除会话时取消请求并丢弃迟到的结果
+- IndexedDB 持久化、会话管理（新建 / 切换 / 删除）、聊天记录导出（JSON / Markdown）；写消息前确认会话仍存在
+- Live2D 渲染（Cubism 3/4）、三种模型加载方式、情绪驱动表情、加载失败降级
+- 启动或保存失败时显示错误并可重试
+- 单测（Vitest）、E2E（Playwright，接口由测试模拟）、骨架自检页
 
 **待接入**
 
 - 真实 LLM 适配器与 SQLite 后端双写（当前后端只有 Mock 适配器）
+- 真实厂商的连通测试（目前只在本机检查格式与 Key 是否已填写）
 - 内容安全关键词过滤（规格书 M1.7）
 - TTS 语音合成 / ASR 语音输入 / 口型同步（Phase 1）
 - 长期记忆 RAG、Function Calling、多角色切换

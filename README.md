@@ -20,7 +20,7 @@
 ---
 
 > **⚠️ 開發階段聲明**
-> **本分支是存檔**：第二版（以 Live2D 開源專案製作的引導版）加上 Codex 的修正，不是第三版。第三版（AnimaVox 文字對話版）請見 `feature/v3-text-chat` 分支。
+> **本分支是存檔**：第二版（以 Live2D 開源專案製作的引導版）加上 Codex 的修正，不是第三版。第三版（AnimaVox 文字對話版）請見 `main`。
 >
 > 本倉庫目前是**第二版前端（Codex 修正版）與可運行的 Mock 串接骨架**（見下方[快速開始](#-快速開始-quick-start)）。正式後端尚未開工；`backend/` 僅供前端開發、自檢與測試。Codex 修正版前端的範圍與交接說明見 [frontend/README.md](frontend/README.md)。
 > 真實 LLM、SQLite 儲存與金鑰加密、語音管線（GPT-SoVITS TTS / STT）、長期記憶與 Live2D 口型同步均未實作。下列產品願景與路線圖不代表已完成功能。

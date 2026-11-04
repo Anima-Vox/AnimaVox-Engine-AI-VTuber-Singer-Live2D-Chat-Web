@@ -1,9 +1,54 @@
 import { expect, test, type Page } from '@playwright/test';
 
 /**
- * 首次使用全流程 E2E（对应立项文档 3.1 流程与验收 A6 / R1）。
- * 交流程依赖后端 Mock，所以运行前需要 `npm run dev`（Playwright 会自动复用已在跑的服务）。
+ * 第三版首次使用全流程 E2E。
+ * 第三版前端独立验收：API 响应仅由本测试的 page.route 提供，不启动或依赖第二版后端。
  */
+
+test.beforeEach(async ({ page }) => {
+  let responseNumber = 0;
+  await page.route('**/api/**', async (route) => {
+    const request = route.request();
+    const headers = {
+      'access-control-allow-origin': '*',
+      'access-control-allow-methods': 'GET, POST, OPTIONS',
+      'access-control-allow-headers': 'content-type',
+    };
+    if (request.method() === 'OPTIONS') {
+      await route.fulfill({ status: 204, headers });
+      return;
+    }
+    const endpoint = new URL(request.url()).pathname;
+    expect(request.method(), `Unexpected API method for ${endpoint}`).toBe('POST');
+    if (endpoint === '/api/models/test') {
+      expect(request.postDataJSON()).toMatchObject({ provider: 'mock' });
+      await route.fulfill({
+        headers,
+        json: { ok: true, mode: 'mock', message: 'E2E fixture: no backend service', latencyMs: 1 },
+      });
+      return;
+    }
+    // Unknown API calls must fail this test instead of reaching an unrelated service.
+    expect(endpoint).toBe('/api/chat');
+    const body = request.postDataJSON() as { conversationId: string };
+    expect(body.conversationId).toEqual(expect.any(String));
+    await route.fulfill({
+      headers,
+      json: {
+        conversationId: body.conversationId,
+        messageId: `e2e-reply-${++responseNumber}`,
+        // Receipt time keeps the reply after the locally persisted user message on reload.
+        createdAt: new Date().toISOString(),
+        response: {
+          text: '我不太会安慰人……但我可以听你说。',
+          emotion: 'sad',
+          action: 'idle',
+          expression: 'frown',
+        },
+      },
+    });
+  });
+});
 
 /** 走完「欢迎页 → 3 步向导 → 进入聊天」并等角色开口 */
 async function completeOnboarding(page: Page): Promise<void> {

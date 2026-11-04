@@ -64,13 +64,17 @@ export function LlmStep({
 
       <TextField
         label="API Key"
-        hint={preset.requiresApiKey ? '必填，只保存在本机' : '该厂商不需要 Key'}
+        hint={
+          preset.requiresApiKey
+            ? '预留字段；当前仅在本机校验格式，无需真实 Key'
+            : '该厂商不需要 Key'
+        }
         type="password"
         autoComplete="off"
         disabled={!preset.requiresApiKey}
         value={draft.apiKey}
         onChange={(event) => onChange({ apiKey: event.target.value })}
-        placeholder={preset.requiresApiKey ? 'sk-…' : '无需填写'}
+        placeholder={preset.requiresApiKey ? '当前无需填写' : '无需填写'}
         spellCheck={false}
       />
 

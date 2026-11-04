@@ -7,7 +7,10 @@ import {
 } from '@shared';
 import { httpClient } from './httpClient';
 
-export type SendChatParams = ChatRequest;
+export interface SendChatParams extends ChatRequest {
+  /** 前端用户消息 ID，供后续后端关联；当前不代表服务端已实现幂等。 */
+  clientMessageId?: string;
+}
 
 /** 后端健康检查 */
 export async function fetchHealth(): Promise<HealthResponse> {

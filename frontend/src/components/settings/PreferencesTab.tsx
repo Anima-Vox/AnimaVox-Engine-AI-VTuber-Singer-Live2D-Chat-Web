@@ -164,8 +164,9 @@ export function PreferencesTab() {
       <section className="rounded-panel border border-pink/40 bg-white/45 p-4">
         <h3 className="text-sm text-ink-deep">数据与隐私</h3>
         <p className="mt-2 text-[11px] leading-relaxed text-ink-soft">
-          聊天记录、角色设定和模型配置保存在本机。发送消息时，角色设定与最近消息会传给所配置的服务，当前回复为
-          Mock。 已填写的 API Key 会明文保存在浏览器；当前格式校验不需要也不会发送真实 Key。
+          聊天记录、角色设定和模型配置保存在本机。发送消息时，角色设定与最近消息会传给所配置的服务，后续处理由该服务决定。
+          已填写的 API Key 会明文保存在浏览器；当前本机格式校验不联网，也不发送
+          Key。真实连接的密钥方案仍待确定。
         </p>
 
         {pendingReset ? (

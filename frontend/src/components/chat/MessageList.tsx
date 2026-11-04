@@ -26,7 +26,7 @@ export function MessageList() {
           <ChatBubbleIcon className="text-pink-deep" />
           <p className="font-display text-base text-ink-deep">和 {characterName} 打个招呼吧～</p>
           <p className="text-xs leading-relaxed text-ink-soft">
-            记录保存在本机。发送时，角色设定与最近消息会传给所配置的服务；当前回复为 Mock。
+            记录保存在本机。发送时，角色设定与最近消息会传给所配置的服务，后续处理由该服务决定。
           </p>
         </div>
       ) : null}

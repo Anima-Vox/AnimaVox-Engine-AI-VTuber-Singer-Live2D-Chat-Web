@@ -85,6 +85,7 @@ export const zhCN = {
       network: '连不上服务器，请检查网络或确认后端已经启动。',
       invalid_response: '服务器返回的数据格式不对，请联系后端检查。',
       unknown: '出了点意外，请再试一次。',
+      save: '这句话没能保存到浏览器，所以没有发出去，请再发一次。',
     } satisfies Record<Exclude<NoticeReason, 'http'>, string>,
   },
   stage: {

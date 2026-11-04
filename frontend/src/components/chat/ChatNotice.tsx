@@ -14,6 +14,8 @@ export function ChatNotice({ notice, onRetry, onDismiss }: ChatNoticeProps) {
   const isError = notice.kind === 'error';
   const text =
     notice.reason === 'http' ? t.server(notice.status, notice.detail) : t.reasons[notice.reason];
+  // 保存失败时重试也没用，只留「关闭」
+  const canRetry = notice.reason !== 'save';
 
   return (
     <div
@@ -25,16 +27,18 @@ export function ChatNotice({ notice, onRetry, onDismiss }: ChatNoticeProps) {
     >
       <p className="min-w-0 flex-1">{isError ? t.failed(text) : text}</p>
       <div className="flex shrink-0 gap-2">
-        <button
-          type="button"
-          onClick={onRetry}
-          className={clsx(
-            'rounded-full px-4 py-1.5 font-medium text-white transition-colors',
-            isError ? 'bg-alert hover:bg-[#962c24]' : 'bg-signal hover:bg-signal-deep',
-          )}
-        >
-          {t.retry}
-        </button>
+        {canRetry ? (
+          <button
+            type="button"
+            onClick={onRetry}
+            className={clsx(
+              'rounded-full px-4 py-1.5 font-medium text-white transition-colors',
+              isError ? 'bg-alert hover:bg-[#962c24]' : 'bg-signal hover:bg-signal-deep',
+            )}
+          >
+            {t.retry}
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={onDismiss}

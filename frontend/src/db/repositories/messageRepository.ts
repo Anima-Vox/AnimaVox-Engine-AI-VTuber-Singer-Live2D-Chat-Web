@@ -32,7 +32,13 @@ export async function addMessage(input: NewMessage, database: ChatDatabase = db)
     createdAt: createdAt ?? nowIso(),
   };
 
-  await database.messages.add(message);
+  // 与删除会话用同一个事务：会话已被删除时不写入，避免留下没有会话的消息
+  await database.transaction('rw', database.conversations, database.messages, async () => {
+    if (!(await database.conversations.get(message.conversationId))) {
+      throw new Error('会话已不存在，无法保存消息');
+    }
+    await database.messages.add(message);
+  });
   return message;
 }
 
@@ -45,7 +51,14 @@ export async function addMessages(
     return { ...rest, id: id ?? createId(), createdAt: createdAt ?? nowIso() } satisfies Message;
   });
 
-  await database.messages.bulkAdd(messages);
+  await database.transaction('rw', database.conversations, database.messages, async () => {
+    const conversationIds = [...new Set(messages.map((message) => message.conversationId))];
+    const conversations = await database.conversations.bulkGet(conversationIds);
+    if (conversations.some((conversation) => !conversation)) {
+      throw new Error('会话已不存在，无法保存消息');
+    }
+    await database.messages.bulkAdd(messages);
+  });
   return messages;
 }
 

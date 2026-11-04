@@ -81,6 +81,7 @@ export const zhTW: Messages = {
       network: '連不上服務器，請檢查網絡或確認後端已經啟動。',
       invalid_response: '服務器返回的數據格式不對，請聯繫後端檢查。',
       unknown: '出了點意外，請再試一次。',
+      save: '這句話沒能保存到瀏覽器，所以沒有發出去，請再發一次。',
     },
   },
   stage: {

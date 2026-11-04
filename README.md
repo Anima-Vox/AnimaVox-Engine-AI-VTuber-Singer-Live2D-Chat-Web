@@ -20,11 +20,11 @@
 ---
 
 > **⚠️ 開發階段聲明**
-> 本倉庫目前處於 **Phase 1 開發中**：開源引擎的**前端 MVP 與最小 Mock 後端已完成並可運行**（見下方[快速開始](#-快速開始-quick-start)），
-> 語音管線（GPT-SoVITS TTS / STT）、真實 LLM 適配器、長期記憶與 Live2D 口型同步仍在開發中。
+> 本倉庫目前是**第三版前端（AnimaVox 文字對話版）與最小 Mock 後端**（見下方[快速開始](#-快速開始-quick-start)）。正式後端尚未開工；`backend/` 僅供前端開發與測試。第三版前端的說明見 [frontend/README.md](frontend/README.md)。
+> 真實 LLM、SQLite 儲存與金鑰加密、語音管線（GPT-SoVITS TTS / STT）、長期記憶與 Live2D 渲染均未實作。下列產品願景與路線圖不代表已完成功能。
 > 歡迎透過 Issue 參與討論，或見下方[招募段落](#-招募同伴我們正在尋找開發夥伴-we-are-hiring)。
 >
-> **`feature/text-chat-v1` 分支**：前端為 AnimaVox 文字對話版（四欄介面、多角色、歷史對話，Live2D 展示框已預留），預設使用瀏覽器內的假後端，說明見 [frontend/README.md](frontend/README.md)。
+> **版本說明**：第一版為最初版本；第二版為以 Live2D 開源專案製作的引導版（目前在 `main`）；第三版為 AnimaVox 文字對話版（`feature/v3-text-chat`，即本文件所描述）。`feature/v2-codex-fixes` 為第二版加 Codex 修正的存檔。
 
 ---
 
@@ -41,7 +41,7 @@
 | 人格 / 音色 / 模型 | 完全開放自訂 | 鎖定，不隨程式碼分發 |
 | 授權 | AGPL-3.0 | 角色資產另立授權，保留一切權利 |
 
-**開源的是引擎，不是佳尹。** 任何人都可以用這套引擎打造自己的虛擬夥伴，資料全部留在本地設備；而李佳尹本人作為官方實例，其人格、聲音與視覺形象由官方維護，確保她始終是她。
+**開源的是引擎，不是佳尹。** 開源引擎以本機儲存為基礎，發送對話時仍需把最近的對話傳給所連接的後端；李佳尹官方實例則規劃由官方維護人格、聲音與視覺形象，確保她始終是她。
 
 ### Phase 1 範圍
 
@@ -132,11 +132,11 @@ Phase 1 已重新定義，語音能力不再延後至 Phase 2：
 ### 🛡️ 核心特性
 
 1.  **雙層架構 (Two-Layer Design)**：開源引擎供任何人自備 Key 使用；李佳尹官方實例 100% 運行於官方 API，確保角色一致性與品質。
-2.  **隱私優先 (Local-First)**：聊天紀錄儲存於瀏覽器 `IndexedDB`，並雙寫備份至後端 `SQLite`，絕不上傳第三方伺服器。
+2.  **本機儲存 (Local-First，已實作)**：聊天紀錄保存在瀏覽器 `IndexedDB`。發送時會把最近的對話傳給所連接的後端（預設是瀏覽器內的假後端）；尚無 SQLite 備份。
 3.  **語音可選 (Voice as Optional Layer)**：TTS / STT 為可插拔模組，任一失效不影響文字對話。李佳尹官方版使用專屬訓練音色。
-4.  **Live2D 沉浸渲染**：整合 `pixi-live2d-display`，支援全螢幕角色展示，AI 返回的 `emotion` 欄位直接驅動模型表情聯動（口型同步順延 Phase 2）。
+4.  **Live2D 沉浸渲染（規劃，Phase 2）**：第三版右側已預留角色展示框；之後整合 Live2D，由 AI 返回的 `emotion` 欄位驅動模型表情聯動，口型同步同樣在 Phase 2。
 5.  **多模型自由切換**：相容 OpenAI API 格式（引擎預設 **DeepSeek V4 Pro**，模型 ID `deepseek-v4-pro`），支援在設定頁配置多組 API URL/Key，一鍵切換不掉上下文。
-6.  **安全代理**：API Key 加密儲存於後端 SQLite，由 Fastify 後端代理發送請求，金鑰不暴露於前端瀏覽器。
+6.  **金鑰代理（規劃）**：尚無服務端金鑰儲存或加密。第三版前端不持有、不發送任何 API Key，模型由後端決定；使用者自建角色開放後，需要 Key 的廠商必須填寫 API Key。
 
 > **模型版本注意**：`deepseek-chat` 與 `deepseek-reasoner` 等舊版模型 ID 已於 2026 年 7 月停用，請使用 `deepseek-v4-pro`。
 
@@ -144,7 +144,7 @@ Phase 1 已重新定義，語音能力不再延後至 Phase 2：
 
 **已實作（本分支可運行）**
 *   **Frontend**: React 18 + Vite + TypeScript + Tailwind CSS + Zustand + Dexie.js (IndexedDB)（Live2D 展示框已預留，渲染器於 Phase 2 接入）
-*   **Backend**: Node.js + Fastify + TypeScript（當前為 Mock 適配器，真實廠商待接入）
+*   **Mock 後端**: Node.js + Fastify + TypeScript（健康檢查與 Mock 對話；正式後端未開工）
 *   **Shared**: Zod（前後端共用 schema，位於 `packages/shared`）
 *   **測試**: Vitest（單元測試）+ Playwright（E2E，1280×720 / 1920×1080 / 2560×1440）
 
@@ -156,7 +156,7 @@ Phase 1 已重新定義，語音能力不再延後至 Phase 2：
 
 ## 🚀 快速開始 (Quick Start)
 
-> 以下为 `feature/text-chat-v1` 分支（AnimaVox 文字对话版）。前端的完整说明见 [frontend/README.md](frontend/README.md)。
+> 以下为第三版前端（AnimaVox 文字对话版，`feature/v3-text-chat` 分支）。前端的完整说明见 [frontend/README.md](frontend/README.md)。
 
 **环境要求**：Node.js ≥ 20、npm ≥ 10。
 
@@ -192,7 +192,7 @@ npm run dev:frontend
 | `PORT` | `3001` | 监听端口 |
 | `HOST` | `0.0.0.0` | 监听地址 |
 | `NODE_ENV` | `development` | 决定日志格式 |
-| `LLM_MODE` | `mock` | `mock` / `live` |
+| `LLM_MODE` | `mock` | 当前只有 `mock`；`live` 尚未实现，仍走 mock |
 | `CORS_ORIGIN` | `http://localhost:5173` | 允许的前端来源，多个用逗号分隔 |
 
 ### 常用命令
@@ -228,17 +228,26 @@ Web chat/
 └── playwright.config.ts      # E2E 配置（三个分辨率）
 ```
 
+### 后端接手边界
+
+- 前端只通过 `frontend/src/services/chat/` 的 `ChatTransport` 与后端沟通，请求与响应的 Zod 契约在 `packages/shared/src/schemas/`（`POST /api/chat`）。详细约定见 [frontend/README.md](frontend/README.md)「和后端的约定」。
+- 前端不持有 API Key、不发送 System Prompt：`characterId` 交给后端选择人设，`modelConfigId` 固定传 `official`，由后端决定实际模型。当前 Mock 后端还没有使用 `characterId`。
+- 当前只有健康检查与 Mock 对话，没有真实模型、会话同步或记忆服务。开始正式后端前，先共同确定人设与模型由谁持有、上下文由谁维护及其版本、消息 ID / 幂等规则和错误契约。
+
 ### 数据与隐私
 
 - 聊天记录保存在本机浏览器的 IndexedDB（`lijiaying-chat`），角色回复以完整 JSON 保存（`emotion` / `action` / `expression` / `text` / `tool_calls`），界面目前只显示文字。
+- 发送时会把最近 20 条对话文字传给所连接的后端。默认的假后端在浏览器里运行，内容不会离开浏览器；当前后端也只返回 Mock，不调用第三方 LLM。
+- 前端不持有、不保存任何 API Key。
 
 ### Roadmap
 
-**已完成（文字对话版前端）**
+**已完成（Phase 1 前端 · 第三版：AnimaVox 文字对话版）**
 
 - AnimaVox 四栏界面、官方角色锁定、每个角色独立的历史对话（新建 / 切换 / 删除）
 - 假后端 / 真实后端一键切换，前后端共用 Zod 契约
 - 界面三语（简体 / 繁體 / English）
+- 切换或删除对话时取消正在等的请求；迟到的回复不会显示在别的对话，也不会写回已删除的对话；连按两次只发一次；写入本地失败时提示
 - 单测（Vitest）、E2E（Playwright，三个分辨率）
 
 **待接入**
@@ -270,7 +279,7 @@ Web chat/
 
 ### 🛠️ 2. 後端 / AI 整合工程師 (Back-End / AI Developer)
 
-**負責範圍：** 維護本地微服務器，穩定 LLM API 請求與本地資料庫，為後續語音管線鋪路。
+**負責範圍：** 從現有 Mock 契約開始建立正式後端，實作 LLM API、資料儲存與安全邊界，為後續語音管線鋪路。
 
 - 熟練掌握 **Node.js** 與 **TypeScript**。
 - 熟悉 **Fastify** 或 Express/Koa 框架，了解 RESTful API 設計。

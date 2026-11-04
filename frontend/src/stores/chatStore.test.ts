@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChatRequest, ChatResponse } from '@shared';
 import { ChatDatabase } from '../db';
 import { listMessages } from '../db/repositories/messageRepository';
@@ -34,6 +34,34 @@ function flakyTransport(requests: ChatRequest[] = []): ChatTransport {
       return inner.send(request);
     },
   };
+}
+
+/** 记下每次请求，正常回复 */
+function recordingTransport(requests: ChatRequest[]): ChatTransport {
+  const inner = instantTransport();
+  return {
+    mode: 'mock',
+    async send(request: ChatRequest): Promise<ChatResponse> {
+      requests.push(request);
+      return inner.send(request);
+    },
+  };
+}
+
+/** 等测试调用 release() 才回复，而且不理会中断，模拟回复刚好在删除对话前后到达 */
+function lateTransport() {
+  let release = () => {};
+  const inner = instantTransport();
+  const transport: ChatTransport = {
+    mode: 'mock',
+    async send(request: ChatRequest): Promise<ChatResponse> {
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      return inner.send(request);
+    },
+  };
+  return { transport, release: () => release() };
 }
 
 async function openStore(transport: ChatTransport = instantTransport(), characterId = 'lijiaying') {
@@ -145,6 +173,44 @@ describe('chatStore', () => {
     const second = await openStore();
 
     expect(second.getState().notice?.kind).toBe('stopped');
+  });
+
+  it('连按两次发送只会发出一次', async () => {
+    const requests: ChatRequest[] = [];
+    const store = await openStore(recordingTransport(requests));
+
+    await Promise.all([store.getState().send('你好'), store.getState().send('你好')]);
+
+    expect(requests).toHaveLength(1);
+    expect(store.getState().conversations).toHaveLength(1);
+    expect(store.getState().messages.map((message) => message.role)).toEqual(['user', 'assistant']);
+  });
+
+  it('等待回复时删除对话，迟到的回复不会写回本地', async () => {
+    const { transport, release } = lateTransport();
+    const store = await openStore(transport);
+
+    const pending = store.getState().send('你好');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    await store.getState().deleteConversation(store.getState().conversationId ?? '');
+    release();
+    await pending;
+
+    expect(await database.messages.count()).toBe(0);
+    expect(store.getState().conversationId).toBeNull();
+    expect(store.getState().notice).toBeNull();
+  });
+
+  it('写入本地失败时提示，而且不发出请求', async () => {
+    const requests: ChatRequest[] = [];
+    const store = await openStore(recordingTransport(requests));
+    vi.spyOn(database.conversations, 'add').mockRejectedValueOnce(new Error('存储空间已满'));
+
+    await store.getState().send('你好');
+
+    expect(requests).toHaveLength(0);
+    expect(store.getState().status).toBe('ready');
+    expect(store.getState().notice).toEqual({ kind: 'error', reason: 'save' });
   });
 });
 

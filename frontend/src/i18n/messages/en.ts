@@ -85,6 +85,7 @@ export const en: Messages = {
       invalid_response:
         'The server returned data in the wrong format. Please ask the backend team to check.',
       unknown: 'Something went wrong. Please try again.',
+      save: "This message couldn't be saved in your browser, so it wasn't sent. Please send it again.",
     },
   },
   stage: {

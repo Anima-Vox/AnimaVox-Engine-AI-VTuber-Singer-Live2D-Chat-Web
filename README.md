@@ -24,7 +24,7 @@
 > 真實 LLM、SQLite 儲存與金鑰加密、語音管線（GPT-SoVITS TTS / STT）、長期記憶與 Live2D 渲染均未實作。下列產品願景與路線圖不代表已完成功能。
 > 歡迎透過 Issue 參與討論，或見下方[招募段落](#-招募同伴我們正在尋找開發夥伴-we-are-hiring)。
 >
-> **版本說明**：第一版為最初版本；第二版為以 Live2D 開源專案製作的引導版（目前在 `main`）；第三版為 AnimaVox 文字對話版（`feature/v3-text-chat`，即本文件所描述）。`feature/v2-codex-fixes` 為第二版加 Codex 修正的存檔。
+> **版本說明**：第一版為最初版本；第二版為以 Live2D 開源專案製作的引導版，已由第三版取代（加上 Codex 修正的存檔在 `feature/v2-codex-fixes`）；第三版為 AnimaVox 文字對話版，也就是目前的 `main`（本文件所描述）。
 
 ---
 
@@ -156,7 +156,7 @@ Phase 1 已重新定義，語音能力不再延後至 Phase 2：
 
 ## 🚀 快速開始 (Quick Start)
 
-> 以下为第三版前端（AnimaVox 文字对话版，`feature/v3-text-chat` 分支）。前端的完整说明见 [frontend/README.md](frontend/README.md)。
+> 以下为第三版前端（AnimaVox 文字对话版）。前端的完整说明见 [frontend/README.md](frontend/README.md)。
 
 **环境要求**：Node.js ≥ 20、npm ≥ 10。
 

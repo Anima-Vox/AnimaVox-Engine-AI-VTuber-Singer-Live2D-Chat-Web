@@ -20,7 +20,9 @@
 ---
 
 > **⚠️ 開發階段聲明**
-> 本倉庫目前是**第三版前端（第三改版第一定稿）與可運行的 Mock 串接骨架**（見下方[快速開始](#-快速開始-quick-start)）。正式後端尚未開工；`backend/` 僅供前端開發、自檢與測試。第三版前端的範圍與交接說明見 [frontend/README.md](frontend/README.md)。
+> **本分支是存檔**：第二版（以 Live2D 開源專案製作的引導版）加上 Codex 的修正，不是第三版。第三版（AnimaVox 文字對話版）請見 `feature/v3-text-chat` 分支。
+>
+> 本倉庫目前是**第二版前端（Codex 修正版）與可運行的 Mock 串接骨架**（見下方[快速開始](#-快速開始-quick-start)）。正式後端尚未開工；`backend/` 僅供前端開發、自檢與測試。Codex 修正版前端的範圍與交接說明見 [frontend/README.md](frontend/README.md)。
 > 真實 LLM、SQLite 儲存與金鑰加密、語音管線（GPT-SoVITS TTS / STT）、長期記憶與 Live2D 口型同步均未實作。下列產品願景與路線圖不代表已完成功能。
 > 歡迎透過 Issue 參與討論，或見下方[招募段落](#-招募同伴我們正在尋找開發夥伴-we-are-hiring)。
 
@@ -144,7 +146,7 @@ Phase 1 已重新定義，語音能力不再延後至 Phase 2：
 *   **Frontend**: React 18 + Vite + TypeScript + Tailwind CSS + Zustand + Dexie.js (IndexedDB) + PixiJS / pixi-live2d-display
 *   **Mock 骨架**: Node.js + Fastify + TypeScript（健康檢查、Mock 對話與配置格式測試；正式後端未開工）
 *   **Shared**: Zod（前後端共用 schema，位於 `packages/shared`）
-*   **測試**: Vitest（單元測試）+ Playwright（E2E，1280×720 / 1920×1080；第三版前端的 E2E 以模擬接口驗收，不需啟動後端）
+*   **測試**: Vitest（單元測試）+ Playwright（E2E，1280×720 / 1920×1080；Codex 修正版前端的 E2E 以模擬接口驗收，不需啟動後端）
 
 **規劃導入**
 *   **Backend**: Drizzle ORM + SQLite 雙寫、真實 LLM 適配器（DeepSeek V4 Pro）、內容安全中間件
@@ -234,12 +236,12 @@ npm run build            # 构建前端，产物在 frontend/dist
 npm run typecheck        # 全项目 TS 严格模式检查
 npm run lint             # ESLint
 npm run test             # Vitest 单元测试（前端 + Mock 骨架）
-npx playwright test -c frontend/playwright.config.ts  # 第三版前端 E2E（接口由测试模拟，只启动前端）
+npx playwright test -c frontend/playwright.config.ts  # Codex 修正版前端 E2E（接口由测试模拟，只启动前端）
 npm run test:e2e         # 旧版 E2E 配置（同时启动前端与 Mock 骨架）
 npm run format           # Prettier 格式化
 ```
 
-首次运行 E2E 前安装浏览器：`npx playwright install chromium`。新成员先运行 `npm run typecheck`、`npm run lint`、`npm test`、`npm run build`，再运行第三版前端 E2E，验证首次引导、Mock 对话与导出。
+首次运行 E2E 前安装浏览器：`npx playwright install chromium`。新成员先运行 `npm run typecheck`、`npm run lint`、`npm test`、`npm run build`，再运行Codex 修正版前端 E2E，验证首次引导、Mock 对话与导出。
 
 > 已知情况：部分无头浏览器环境会把含中文的下载文件名改成 `download`，导致「导出 Markdown」测试失败；应用交给浏览器的文件名本身是正确的。
 
@@ -259,10 +261,10 @@ npx playwright test
 ```
 Web chat/
 ├── packages/shared/          # 前后端共享的 Zod schema 与类型（LLM 契约、角色、会话、模型配置）
-├── frontend/                 # 第三版前端：React 18 + Vite + Tailwind（说明见 frontend/README.md）
+├── frontend/                 # Codex 修正版前端：React 18 + Vite + Tailwind（说明见 frontend/README.md）
 │   ├── plugins/              # 构建期插件（生成 public/models 清单）
 │   ├── e2e/                  # Playwright 端到端测试（接口由测试模拟）
-│   ├── playwright.config.ts  # 第三版 E2E 配置（只启动前端）
+│   ├── playwright.config.ts  # Codex 修正版 E2E 配置（只启动前端）
 │   └── src/
 │       ├── components/       # chat / live2d / settings / onboarding / layout / common / diagnostics
 │       ├── stores/           # Zustand：ui / chat / character / model / live2d
@@ -293,7 +295,7 @@ Web chat/
 
 ### Roadmap
 
-**已完成（Phase 1 前端 · 第三版前端，第三改版第一定稿）**
+**已完成（Phase 1 前端 · 第二版前端 · Codex 修正版）**
 
 - 3 步首屏引导 + 测试连接强制门禁（需要 Key 的厂商必须填写 Key）
 - 多 LLM 配置管理与切换、角色人格自定义

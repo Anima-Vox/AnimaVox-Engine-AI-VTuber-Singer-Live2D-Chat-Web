@@ -3,21 +3,13 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --color-cream: #fdf9f4;
-    --color-cream-deep: #f6ede4;
-    --color-cream-sunk: #efe3d8;
-    --color-pink: #ffb8c8;
-    --color-pink-soft: #ffd9e2;
-    --color-pink-deep: #f79cb0;
-    --color-yolk: #ffe3a3;
-    --color-yolk-soft: #fff1cc;
-    --color-mint: #b7e4d0;
-    --color-mint-soft: #dcf3e9;
-    --color-sky: #c7dcef;
-    --color-ink: #6b5b57;
-    --color-ink-soft: #9c8b86;
-    --color-ink-deep: #4a3e3b;
+  /*
+   * 以 2560 × 1440（16:9）为设计基准：根字号随视口宽度缩放，
+   * 2560 宽约 18.5px，1920 宽约 15.6px，最小 15px。
+   * Windows 开了 125% / 150% 缩放时视口会变窄，界面会跟着等比缩小。
+   */
+  html {
+    font-size: clamp(15px, calc(0.45vw + 7px), 20px);
   }
 
   html,
@@ -28,98 +20,83 @@
 
   body {
     margin: 0;
-    background-color: var(--color-cream);
-    color: var(--color-ink);
-    font-family:
-      'LXGW WenKai',
-      system-ui,
-      -apple-system,
-      'Segoe UI',
-      'Microsoft YaHei',
-      sans-serif;
+    overflow: hidden;
+    background-color: theme('colors.mist.DEFAULT');
+    color: theme('colors.ink');
+    font-family: theme('fontFamily.sans');
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
-    overflow: hidden;
   }
 
-  /* 标题统一用圆润的站酷快乐体 */
-  h1,
-  h2,
-  h3 {
-    font-family: 'ZCOOL KuaiLe', 'LXGW WenKai', system-ui, sans-serif;
-    font-weight: 400;
+  html:lang(zh-TW) body {
+    font-family: theme('fontFamily.sans-tc');
   }
 
   ::selection {
-    background: var(--color-yolk);
-    color: var(--color-ink-deep);
+    background: theme('colors.signal.soft');
+    color: theme('colors.ink');
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-pink);
+    outline: 2px solid theme('colors.signal.DEFAULT');
     outline-offset: 2px;
   }
 }
 
-@layer utilities {
-  /* 毛玻璃面板：草莓牛奶感的半透明卡片 */
-  .glass-panel {
-    background: linear-gradient(
-      145deg,
-      rgba(255, 255, 255, 0.82) 0%,
-      rgba(255, 249, 244, 0.72) 100%
-    );
-    backdrop-filter: blur(22px) saturate(150%);
-    -webkit-backdrop-filter: blur(22px) saturate(150%);
+@layer components {
+  /*
+   * 右侧拱形展示框（造型来自《李佳尹 角色资料介绍》第一页的立绘框）：
+   * 上方半圆、下方小圆角，白 → 蓝 → 深夜蓝的渐变，内圈一道虚线。
+   * 外层 .stage-slot 是尺寸容器，展示框按 2:5 的比例尽量撑满。
+   */
+  .stage-slot {
+    container-type: size;
+    display: grid;
+    place-items: center;
   }
 
-  .glass-dock {
-    background: rgba(255, 252, 249, 0.78);
-    backdrop-filter: blur(26px) saturate(160%);
-    -webkit-backdrop-filter: blur(26px) saturate(160%);
+  .stage-frame {
+    --frame-w: min(86cqw, calc(100cqh * 2 / 5));
+    --frame-inset: 0.9rem;
+    --frame-foot: 1.1rem;
+    position: relative;
+    overflow: hidden;
+    width: var(--frame-w);
+    aspect-ratio: 2 / 5;
+    border: 1px solid rgb(61 99 232 / 0.22);
+    border-radius: calc(var(--frame-w) / 2) calc(var(--frame-w) / 2) var(--frame-foot)
+      var(--frame-foot);
+    background:
+      radial-gradient(60% 32% at 50% 30%, rgb(255 255 255 / 0.6), transparent 70%),
+      linear-gradient(180deg, #ffffff 0%, #e6ecfb 26%, #b9c8f4 54%, #5a77d6 80%, #182544 100%);
+    /* 渐变从边框外缘开始画，避免底色在顶部边框下重复出现一道深色线 */
+    background-origin: border-box;
+    background-repeat: no-repeat;
+    box-shadow: 0 2.2rem 3.5rem -2rem rgb(22 33 58 / 0.5);
   }
 
-  /* 纸纹噪点，避免大面积纯色显得塑料 */
-  .noise-overlay {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
-    opacity: 0.05;
-    mix-blend-mode: multiply;
+  .stage-frame-inner {
+    position: absolute;
+    inset: var(--frame-inset);
+    border: 1px dashed rgb(61 99 232 / 0.35);
+    border-radius: calc(var(--frame-w) / 2 - var(--frame-inset))
+      calc(var(--frame-w) / 2 - var(--frame-inset)) calc(var(--frame-foot) - 0.35rem)
+      calc(var(--frame-foot) - 0.35rem);
   }
 
-  /* 柔和的滚动条，不打断整体氛围 */
-  .scroll-soft {
+  .thin-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 184, 200, 0.55) transparent;
-  }
-
-  .scroll-soft::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  .scroll-soft::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .scroll-soft::-webkit-scrollbar-thumb {
-    background: rgba(255, 184, 200, 0.5);
-    border-radius: 999px;
-  }
-
-  .scroll-soft::-webkit-scrollbar-thumb:hover {
-    background: rgba(247, 156, 176, 0.7);
+    scrollbar-color: theme('colors.mist.deep') transparent;
   }
 }
 
-/* 尊重系统的「减少动态效果」设置 */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
+    animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
 }

@@ -7,8 +7,12 @@ function pad(value: number): string {
   return value.toString().padStart(2, '0');
 }
 
-/** 会话侧栏用的简短时间：今天显示 HH:mm，昨天显示「昨天」，更早显示 MM/DD */
-export function formatSidebarTime(iso: string, now: Date = new Date()): string {
+/** 会话侧栏用的简短时间：今天显示 HH:mm，昨天显示 yesterdayLabel，更早显示 MM/DD */
+export function formatSidebarTime(
+  iso: string,
+  yesterdayLabel: string,
+  now: Date = new Date(),
+): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) {
     return '';
@@ -26,7 +30,7 @@ export function formatSidebarTime(iso: string, now: Date = new Date()): string {
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);
   if (isSameDay(date, yesterday)) {
-    return '昨天';
+    return yesterdayLabel;
   }
 
   return `${pad(date.getMonth() + 1)}/${pad(date.getDate())}`;

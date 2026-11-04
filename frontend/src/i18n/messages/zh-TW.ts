@@ -1,0 +1,92 @@
+import type { Messages } from './zh-CN';
+
+/** 繁體中文界面文字：由簡體逐字轉換（OpenCC s2tw），只換字形，不換用詞。 */
+export const zhTW: Messages = {
+  nav: {
+    menu: '主菜單',
+    conversations: { label: '對話', title: '對話記錄' },
+    characters: { label: '角色', title: '切換角色' },
+    persona: { label: '人設', title: '人設 Prompt' },
+    api: { label: 'API', title: '模型與 API' },
+    settings: { label: '設置', title: '設置' },
+  },
+  conversations: {
+    title: (character) => `和${character.shortName}的對話`,
+    new: '新對話',
+    untitled: '新的對話',
+    empty: '發出第一句話後，對話會保存在這裡。',
+    delete: '刪除對話',
+    deleteNamed: (title) => `刪除對話：${title}`,
+    confirmDelete: '確認刪除',
+    yesterday: '昨天',
+  },
+  characters: {
+    title: '角色',
+    official: '官方',
+    create: '創建自己的角色',
+    comingSoon: '開源引擎功能，即將開放',
+  },
+  persona: {
+    title: '人設 Prompt',
+    locked: (character) =>
+      `${character.name}是官方角色，人設由官方維護，不能修改，也不會顯示在前端。`,
+    editorSoon: '人設編輯器即將開放。',
+    name: '名字',
+    englishName: '英文名',
+    tagline: '簡介',
+    customNote: '使用者自己創建的角色可以在這裡編寫人設（開源引擎功能，即將開放）。',
+  },
+  api: {
+    title: '模型與 API',
+    locked: (character) => `${character.name}固定使用官方模型與 API，不需要也不能填寫自己的 Key。`,
+    customSoon: '自定義 API 設置即將開放。',
+    channel: '對話通道',
+    channels: { mock: '演示（瀏覽器內假後端）', http: '自家後端' },
+    backendUrl: '後端地址',
+    customNote: '使用者自己創建的角色可以接入自己的模型與 API（開源引擎功能，即將開放）。',
+  },
+  settings: {
+    title: '設置',
+    language: '界面語言',
+    history: '聊天記錄',
+    historyValue: '只保存在這個瀏覽器裡',
+    engine: '引擎',
+    engineValue: 'AnimaVox 心音',
+    version: '版本',
+    versionValue: '文字對話版 0.2',
+  },
+  chat: {
+    demoBadge: '演示模式：回覆來自假後端',
+    you: '你說',
+    says: (character) => `${character.shortName}說`,
+    typing: (character) => `${character.shortName}正在輸入`,
+    starters: '可以這樣開始',
+    placeholder: (character) => `和${character.shortName}說點什麼…`,
+    input: '消息輸入框',
+    send: '發送',
+    stop: '停止等待回覆',
+    hint: '按 Enter 發送，Shift + Enter 換行',
+  },
+  notice: {
+    failed: (reason) => `沒有收到回覆。${reason}`,
+    retry: '重試',
+    close: '關閉',
+    server: (status, detail) =>
+      `服務器返回錯誤${status ? `（${status}）` : ''}${detail ? `：${detail}` : '。'}`,
+    reasons: {
+      unanswered: '這條消息還沒有收到回覆。',
+      history: '讀取本地聊天記錄失敗，新的消息仍可以正常發送。',
+      aborted: '已停止等待回覆。',
+      timeout: '等了太久沒有回應，請稍後再試。',
+      network: '連不上服務器，請檢查網絡或確認後端已經啟動。',
+      invalid_response: '服務器返回的數據格式不對，請聯繫後端檢查。',
+      unknown: '出了點意外，請再試一次。',
+    },
+  },
+  stage: {
+    label: (character) => `${character.name}的形象`,
+    online: '在線',
+    typing: '正在輸入…',
+    live2dPending: 'Live2D 準備中',
+  },
+};

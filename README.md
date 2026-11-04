@@ -23,6 +23,8 @@
 > 本倉庫目前處於 **Phase 1 開發中**：開源引擎的**前端 MVP 與最小 Mock 後端已完成並可運行**（見下方[快速開始](#-快速開始-quick-start)），
 > 語音管線（GPT-SoVITS TTS / STT）、真實 LLM 適配器、長期記憶與 Live2D 口型同步仍在開發中。
 > 歡迎透過 Issue 參與討論，或見下方[招募段落](#-招募同伴我們正在尋找開發夥伴-we-are-hiring)。
+>
+> **`feature/text-chat-v1` 分支**：前端為 AnimaVox 文字對話版（四欄介面、多角色、歷史對話，Live2D 展示框已預留），預設使用瀏覽器內的假後端，說明見 [frontend/README.md](frontend/README.md)。
 
 ---
 
@@ -141,10 +143,10 @@ Phase 1 已重新定義，語音能力不再延後至 Phase 2：
 ### 💻 技術棧 (Tech Stack)
 
 **已實作（本分支可運行）**
-*   **Frontend**: React 18 + Vite + TypeScript + Tailwind CSS + Zustand + Dexie.js (IndexedDB) + PixiJS / pixi-live2d-display
+*   **Frontend**: React 18 + Vite + TypeScript + Tailwind CSS + Zustand + Dexie.js (IndexedDB)（Live2D 展示框已預留，渲染器於 Phase 2 接入）
 *   **Backend**: Node.js + Fastify + TypeScript（當前為 Mock 適配器，真實廠商待接入）
 *   **Shared**: Zod（前後端共用 schema，位於 `packages/shared`）
-*   **測試**: Vitest（單元測試）+ Playwright（E2E，1280×720 / 1920×1080）
+*   **測試**: Vitest（單元測試）+ Playwright（E2E，1280×720 / 1920×1080 / 2560×1440）
 
 **規劃導入**
 *   **Backend**: Drizzle ORM + SQLite 雙寫、真實 LLM 適配器（DeepSeek V4 Pro）、內容安全中間件
@@ -154,64 +156,34 @@ Phase 1 已重新定義，語音能力不再延後至 Phase 2：
 
 ## 🚀 快速開始 (Quick Start)
 
-**环境要求**：Node.js ≥ 20、npm ≥ 10（开发环境实测 Node 24 / npm 11）。
+> 以下为 `feature/text-chat-v1` 分支（AnimaVox 文字对话版）。前端的完整说明见 [frontend/README.md](frontend/README.md)。
+
+**环境要求**：Node.js ≥ 20、npm ≥ 10。
 
 ```bash
 npm install
-npm run dev
+npm run dev:frontend
 ```
 
-浏览器打开 <http://localhost:5173>，会先看到欢迎页，跟着 3 步向导走完就能开聊。后端默认跑在 <http://localhost:3001>。
+浏览器打开 <http://localhost:5173> 就能直接聊天：默认使用**浏览器内的假后端**，不需要任何 API Key，也不需要启动后端。
 
-> 手上暂时没有 API Key 也没关系：向导第 1 步的厂商选 **Mock（离线演示）**，不需要任何 Key，就能把完整链路跑通。
+### 界面
 
-### 首次配置（3 步向导）
+以 2560 × 1440（16:9）为设计基准，从左到右：菜单栏 + 与当前角色的历史对话（左 1/4）、对话区（中 2/4）、角色展示框（右 1/4，之后放 Live2D 或立绘）。
 
-1. **配置模型** —— 选厂商（会自动带上默认 API 地址与模型名）→ 填 API Key → 点「测试连接」。
-   **测试不通过就不能进入下一步**，整个向导没有任何跳过入口。
-2. **确认角色** —— 内置示例角色「羽澄糯」，名字、性格、语气、背景、口头禅、禁忌话题都可以直接改。
-3. **导入角色外观** —— 三选一：先用占位插画 / 从本地目录自动探测 / 填模型 URL。
+- **角色**：李佳尹、羽澄糯为官方角色，人设、模型、形象锁定不可修改；使用者自建角色（自带人设、API、Live2D）为开源引擎功能，即将开放。
+- **界面语言**：「设置」里切换简体中文 / 繁體中文 / English，只影响界面文字，角色台词与聊天内容不转换。
 
-之后每次打开都会直接进入聊天界面；想重走向导可以在「设置 → 偏好」里点「重新运行首次引导」。
+### 接入真实后端
 
-### 支持的 LLM
+复制 `frontend/.env.example` 为 `frontend/.env.local`：
 
-全部走 OpenAI 兼容格式，在「设置 → 模型」里可以并存多条配置并一键切换：
-
-| 厂商 | 默认地址 | 默认模型 | 备注 |
-| --- | --- | --- | --- |
-| OpenAI | `https://api.openai.com/v1` | `gpt-4o-mini` | |
-| DeepSeek | `https://api.deepseek.com/v1` | `deepseek-v4-pro` | 官方推荐，引擎预设 |
-| 豆包（火山方舟） | `https://ark.cn-beijing.volces.com/api/v3` | `doubao-pro-32k` | 模型名可填接入点 ID |
-| 通义千问 | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-plus` | 百炼兼容模式 |
-| 智谱 GLM | `https://open.bigmodel.cn/api/paas/v4` | `glm-4-flash` | 有免费额度 |
-| Ollama | `http://localhost:11434/v1` | `qwen2.5:7b` | 本地模型，不需要 Key |
-| Mock | `mock://local` | `mock` | 离线演示，用于跑通链路与开发调试 |
-| 自定义 | 自行填写 | 自行填写 | 任何 OpenAI 兼容接口 |
-
-> 当前版本后端只提供 Mock 适配器，除 Mock 外的厂商在「测试连接」里做的是**配置格式与后端连通性校验**，真实厂商调用会在 LLM 适配器接入后启用（见下方 Roadmap）。
-
-### Live2D 模型
-
-**仓库不内置任何模型文件**，模型版权由使用者自行承担。三种加载方式：
-
-1. **占位插画**（默认）—— 一张内联 SVG 手绘插画，零网络请求、零版权风险，界面功能完全可用。
-2. **本地目录自动探测** —— 把模型文件夹放进 `frontend/public/models/`，应用会读取构建期生成的清单并自动加载第一个找到的 `*.model3.json` / `*.model.json`。
-   > 该目录已在 `.gitignore` 中，模型文件不会被提交。
-3. **填写模型 URL** —— 支持 CDN / GitHub Raw 等远程地址。
-
-Cubism 4/5 模型需要 Live2D 官方 Core 运行时。它不随本仓库分发，默认从 Live2D 官方 CDN 加载，可以用 `VITE_CUBISM_CORE_URL` 指向自托管地址（离线 / 内网场景）。
-
-**情绪驱动表情**：LLM 返回的 `emotion` 会被映射到模型表情。策略是「先按表情名精确匹配，匹配不到则按情绪稳定轮换下标」——因为真实模型的表情名往往是 `F01`/`f00` 这种，按语义名匹配必然落空。同一情绪永远命中同一个表情，不会乱跳。模型加载失败会自动回落到占位插画。
-
-### 环境变量
-
-前端（`frontend/.env`，仅非敏感配置）：
-
-| 变量 | 默认值 | 说明 |
+| 变量 | 取值 | 说明 |
 | --- | --- | --- |
-| `VITE_API_URL` | `http://localhost:3001` | 后端地址 |
-| `VITE_CUBISM_CORE_URL` | Live2D 官方 CDN | Cubism Core 运行时地址 |
+| `VITE_CHAT_TRANSPORT` | `mock`（默认）/ `http` | `mock` = 浏览器内假后端；`http` = 自家后端 |
+| `VITE_API_URL` | 默认 `http://localhost:3001` | 后端地址，只在 `http` 模式使用 |
+
+然后 `npm run dev`（同时启动前端与后端）。前后端只通过 `packages/shared` 的 Zod 契约沟通：前端调用 `POST /api/chat`，**不发送 System Prompt、不持有任何 API Key**，人设与模型由后端决定。
 
 后端（进程环境变量）：
 
@@ -226,70 +198,56 @@ Cubism 4/5 模型需要 Live2D 官方 Core 运行时。它不随本仓库分发�
 ### 常用命令
 
 ```bash
+npm run dev:frontend # 只启动前端（假后端，5173）
 npm run dev          # 同时启动前端(5173) 与后端(3001)
 npm run build        # 构建前端，产物在 frontend/dist
 npm run typecheck    # 全项目 TS 严格模式检查
 npm run lint         # ESLint
 npm run test         # Vitest 单元测试
-npm run test:e2e     # Playwright 端到端测试（需先 npm run dev）
+npm run test:e2e     # Playwright 端到端测试（需先启动前端）
 npm run format       # Prettier 格式化
 ```
 
-E2E 默认覆盖 Chrome 的 1280×720 与 1920×1080 两个分辨率。想跑 Firefox / Safari 兼容性：
-
-```bash
-npx playwright install firefox webkit
-# 然后在 playwright.config.ts 的 projects 里按同样格式补上 firefox / webkit 两项
-npx playwright test
-```
-
-> 若处在受限沙箱里，Playwright 可能无法写入默认的浏览器目录，此时可用
-> `PLAYWRIGHT_BROWSERS_PATH=<项目内目录> npx playwright install ...` 把浏览器装进工作区。
+E2E 覆盖 Chrome 的 1280×720、1920×1080、2560×1440 三个分辨率。
 
 ### 目录结构
 
 ```
 Web chat/
-├── packages/shared/          # 前后端共享的 Zod schema 与类型（LLM 契约、角色、会话、模型配置）
-├── frontend/                 # React 18 + Vite + Tailwind
-│   ├── plugins/              # 构建期插件（生成 public/models 清单）
+├── packages/shared/          # 前后端共享的 Zod schema 与类型（LLM 契约、会话、消息）
+├── frontend/                 # React 18 + Vite + Tailwind（详见 frontend/README.md）
 │   ├── e2e/                  # Playwright 端到端测试
 │   └── src/
-│       ├── components/       # chat / live2d / settings / onboarding / layout / common / diagnostics
-│       ├── stores/           # Zustand：ui / chat / character / model / live2d
-│       ├── db/               # Dexie(IndexedDB) schema 与各实体仓储
-│       ├── services/         # HTTP 客户端、对话 API、模型测试、Live2D 运行时与控制器
-│       ├── utils/            # 情绪映射、System Prompt 拼接、时间格式化等
-│       └── constants/        # 默认角色、provider 预设、设置项 key
+│       ├── components/       # nav / sidebar / chat / stage / common
+│       ├── config/           # 角色注册表、通道与后端地址
+│       ├── i18n/             # 界面语言（简体 / 繁體 / English）
+│       ├── services/chat/    # ChatTransport：假后端与真实后端
+│       ├── stores/           # Zustand：对话 / 当前角色 / 界面语言
+│       └── db/               # Dexie(IndexedDB) schema 与仓储
 ├── backend/                  # Fastify（当前为 Mock 适配器）
-└── playwright.config.ts      # E2E 配置（1280×720 / 1920×1080 两个分辨率）
+└── playwright.config.ts      # E2E 配置（三个分辨率）
 ```
 
 ### 数据与隐私
 
-- 所有数据保存在本机 IndexedDB（`ai-live2d-chat`），**不上传到任何服务器**。
-- **导出聊天记录**：设置 → 偏好 → 导出。JSON 是完整备份（含角色设定与全部消息），Markdown 便于阅读分享；导出全程在浏览器本地完成。
-- 「设置 → 偏好 → 清空本地数据」可以一键重置到首次使用状态。
-- 自检页 `/diagnostics` 提供了链路、渲染依赖、持久化、数据重置的检查项，用于排查环境问题。
+- 聊天记录保存在本机浏览器的 IndexedDB（`lijiaying-chat`），角色回复以完整 JSON 保存（`emotion` / `action` / `expression` / `text` / `tool_calls`），界面目前只显示文字。
 
 ### Roadmap
 
-**已完成（Phase 1 前端）**
+**已完成（文字对话版前端）**
 
-- 3 步首屏引导 + 测试连接强制门禁
-- 多 LLM 配置管理与切换、角色人格自定义
-- 完整对话链路（结构化 JSON：`emotion` / `action` / `expression` / `text`）
-- IndexedDB 持久化、会话管理（新建 / 切换 / 删除）、聊天记录导出（JSON / Markdown）
-- Live2D 渲染、三种模型加载方式、情绪驱动表情、加载失败降级
-- 单测（Vitest）、E2E（Playwright）、骨架自检页
+- AnimaVox 四栏界面、官方角色锁定、每个角色独立的历史对话（新建 / 切换 / 删除）
+- 假后端 / 真实后端一键切换，前后端共用 Zod 契约
+- 界面三语（简体 / 繁體 / English）
+- 单测（Vitest）、E2E（Playwright，三个分辨率）
 
 **待接入**
 
-- 真实 LLM 适配器与 SQLite 后端双写（当前后端只有 Mock 适配器）
-- 内容安全关键词过滤（规格书 M1.7）
-- TTS 语音合成 / ASR 语音输入 / 口型同步（Phase 1）
-- 长期记忆 RAG、Function Calling、多角色切换
-- Docker 部署与 CI
+- 真实 LLM 适配器与 SQLite 后端（当前后端只有 Mock 适配器）
+- 英文用户的对话翻译模组
+- Live2D 渲染、TTS 语音合成 / ASR 语音输入 / 口型同步（Phase 2）
+- 使用者自建角色（人设、API、Live2D）
+- 长期记忆、Function Calling、Docker 部署与 CI
 
 ---
 

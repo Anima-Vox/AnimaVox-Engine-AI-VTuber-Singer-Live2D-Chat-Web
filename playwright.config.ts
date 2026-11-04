@@ -4,7 +4,8 @@ const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:5173';
 
 /**
  * E2E 配置。
- * 注意：对话链路依赖后端，`npm run dev` 会同时起前后端；已在运行时直接复用。
+ * 文字对话版默认走浏览器内的假后端（mock），不需要后端也能跑；
+ * `npm run dev` 会同时起前后端，已在运行时直接复用。
  * 想跑 Firefox / Safari 兼容性见 README「常用命令」一节。
  */
 export default defineConfig({
@@ -25,6 +26,10 @@ export default defineConfig({
     screenshot: 'off',
   },
   projects: [
+    {
+      name: 'chrome-2560x1440',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 2560, height: 1440 } },
+    },
     {
       name: 'chrome-1280x720',
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 720 } },

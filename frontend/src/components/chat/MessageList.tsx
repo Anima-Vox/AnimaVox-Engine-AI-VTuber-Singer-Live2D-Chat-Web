@@ -1,57 +1,71 @@
 import { useEffect, useRef } from 'react';
-import { ChatBubbleIcon, CloseIcon } from '../common/Icon';
-import { useCharacterStore } from '../../stores/characterStore';
-import { useChatStore } from '../../stores/chatStore';
+import type { Message } from '@shared';
+import type { CharacterProfile } from '../../config/characters';
+import type { ChatNotice as Notice } from '../../stores/chatStore';
+import { ChatNotice } from './ChatNotice';
+import { EmptyState } from './EmptyState';
 import { MessageBubble } from './MessageBubble';
-import { TypingIndicator } from './TypingIndicator';
+import { TypingBubble } from './TypingBubble';
 
-/** 浮在角色之上的消息区：滚动到底部、空状态、错误提示都在这里收口 */
-export function MessageList() {
-  const messages = useChatStore((state) => state.messages);
-  const status = useChatStore((state) => state.status);
-  const error = useChatStore((state) => state.error);
-  const clearError = useChatStore((state) => state.clearError);
-  const characterName = useCharacterStore((state) => state.character?.name ?? '角色');
+interface MessageListProps {
+  character: CharacterProfile;
+  messages: Message[];
+  isLoading: boolean;
+  isWaiting: boolean;
+  notice: Notice | null;
+  onPick: (text: string) => void;
+  onRetry: () => void;
+  onDismiss: () => void;
+}
 
-  const bottomRef = useRef<HTMLDivElement>(null);
+/** 切换对话时请给它换一个 key，让滚动位置重新从底部开始 */
+export function MessageList({
+  character,
+  messages,
+  isLoading,
+  isWaiting,
+  notice,
+  onPick,
+  onRetry,
+  onDismiss,
+}: MessageListProps) {
+  const endRef = useRef<HTMLDivElement>(null);
+  const hasScrolled = useRef(false);
 
+  // 打开对话时直接跳到底部；之后有新消息、开始等待或出现提示时平滑滚动
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [messages.length, status]);
+    if (messages.length === 0) {
+      return;
+    }
+    endRef.current?.scrollIntoView({
+      behavior: hasScrolled.current ? 'smooth' : 'auto',
+      block: 'end',
+    });
+    hasScrolled.current = true;
+  }, [messages.length, isWaiting, notice]);
+
+  const isEmpty = messages.length === 0 && !isWaiting;
 
   return (
-    <div className="scroll-soft flex max-h-[52vh] flex-col gap-3 overflow-y-auto px-1 pb-2 pt-2">
-      {messages.length === 0 && status !== 'sending' ? (
-        <div className="glass-panel mx-auto flex max-w-md animate-rise-in flex-col items-center gap-2 rounded-panel px-6 py-5 text-center shadow-soft">
-          <ChatBubbleIcon className="text-pink-deep" />
-          <p className="font-display text-base text-ink-deep">和 {characterName} 打个招呼吧～</p>
-          <p className="text-xs leading-relaxed text-ink-soft">
-            所有对话都保存在你自己的电脑里，不会上传到任何服务器。
-          </p>
-        </div>
-      ) : null}
-
-      {messages.map((message) => (
-        <MessageBubble key={message.id} message={message} characterName={characterName} />
-      ))}
-
-      {status === 'sending' ? <TypingIndicator characterName={characterName} /> : null}
-
-      {status === 'error' && error ? (
-        <div className="mx-auto flex max-w-md animate-rise-in items-start gap-2 rounded-bubble bg-pink-soft/90 px-4 py-2.5 text-xs text-ink-deep shadow-soft">
-          <span className="flex-1 leading-relaxed">出错了：{error}</span>
-          <button
-            type="button"
-            onClick={clearError}
-            aria-label="关闭错误提示"
-            className="mt-0.5 shrink-0 text-ink-soft transition hover:text-ink-deep"
-          >
-            <CloseIcon size={14} />
-          </button>
-        </div>
-      ) : null}
-
-      <div ref={bottomRef} />
+    <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto">
+      <div className="mx-auto flex min-h-full w-full max-w-[50rem] flex-col px-6">
+        {isLoading ? null : isEmpty ? (
+          <EmptyState character={character} onPick={onPick} disabled={isWaiting} />
+        ) : (
+          <div className="flex flex-col gap-6 py-8" aria-live="polite" aria-relevant="additions">
+            {messages.map((message) => (
+              <MessageBubble key={message.id} message={message} character={character} />
+            ))}
+            {isWaiting && <TypingBubble character={character} />}
+          </div>
+        )}
+        {notice && (
+          <div className="pb-6">
+            <ChatNotice notice={notice} onRetry={onRetry} onDismiss={onDismiss} />
+          </div>
+        )}
+        <div ref={endRef} />
+      </div>
     </div>
   );
 }

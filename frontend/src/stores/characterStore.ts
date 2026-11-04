@@ -1,51 +1,40 @@
 import { create } from 'zustand';
-import type { Character, CharacterDraft } from '@shared';
-import {
-  ensureDefaultCharacter,
-  saveCharacter as saveCharacterRecord,
-} from '../db/repositories/characterRepository';
+import { DEFAULT_CHARACTER_ID, findCharacter } from '../config/characters';
+import { db, type ChatDatabase } from '../db';
+import { getSetting, setSetting, SETTING_KEYS } from '../db/repositories/settingsRepository';
 
-export type LoadStatus = 'idle' | 'loading' | 'ready' | 'error';
-
-interface CharacterState {
-  character: Character | null;
-  status: LoadStatus;
-  error: string | null;
-  /** 启动时调用：没有角色则用内置「羽澄糯」初始化 */
-  load: () => Promise<void>;
-  save: (draft: CharacterDraft) => Promise<void>;
+export interface CharacterState {
+  activeCharacterId: string;
+  /** 已从本地读出上次使用的角色 */
+  isRestored: boolean;
+  restore: () => Promise<void>;
+  switchTo: (characterId: string) => Promise<void>;
 }
 
-export const useCharacterStore = create<CharacterState>()((set, get) => ({
-  character: null,
-  status: 'idle',
-  error: null,
+/** 当前角色：记在本地，下次打开仍是同一个角色 */
+export function createCharacterStore(database: ChatDatabase) {
+  return create<CharacterState>()((set, get) => ({
+    activeCharacterId: DEFAULT_CHARACTER_ID,
+    isRestored: false,
 
-  load: async () => {
-    set({ status: 'loading', error: null });
-    try {
-      const character = await ensureDefaultCharacter();
-      set({ character, status: 'ready' });
-    } catch (cause) {
-      set({
-        status: 'error',
-        error: cause instanceof Error ? cause.message : String(cause),
-      });
-    }
-  },
+    restore: async () => {
+      try {
+        const saved = await getSetting(SETTING_KEYS.activeCharacterId, database);
+        const valid = findCharacter(saved);
+        set({ activeCharacterId: valid?.id ?? DEFAULT_CHARACTER_ID, isRestored: true });
+      } catch {
+        set({ isRestored: true });
+      }
+    },
 
-  save: async (draft) => {
-    const current = get().character;
-    if (!current) {
-      set({ error: '角色尚未初始化' });
-      return;
-    }
+    switchTo: async (characterId) => {
+      if (!findCharacter(characterId) || characterId === get().activeCharacterId) {
+        return;
+      }
+      set({ activeCharacterId: characterId });
+      await setSetting(SETTING_KEYS.activeCharacterId, characterId, database);
+    },
+  }));
+}
 
-    try {
-      const character = await saveCharacterRecord(current.id, draft);
-      set({ character });
-    } catch (cause) {
-      set({ error: cause instanceof Error ? cause.message : String(cause) });
-    }
-  },
-}));
+export const useCharacterStore = createCharacterStore(db);

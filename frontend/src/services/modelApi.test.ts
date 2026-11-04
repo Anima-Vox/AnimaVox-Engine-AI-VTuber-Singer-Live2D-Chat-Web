@@ -54,4 +54,29 @@ describe('格式校验请求', () => {
     expect(result.ok).toBe(false);
     expect(httpClient.post).not.toHaveBeenCalled();
   });
+
+  it('需要 Key 的供应商未填写 Key 时不通过，也不发出请求', async () => {
+    const result = await testModelConnection({
+      provider: 'deepseek',
+      apiUrl: 'https://api.deepseek.com/v1',
+      apiKey: '   ',
+      modelName: 'deepseek-v4-pro',
+      contextWindow: 20,
+    });
+    expect(result).toMatchObject({ ok: false, mode: 'format-only' });
+    expect(result.message).toContain('API Key');
+    expect(httpClient.post).not.toHaveBeenCalled();
+  });
+
+  it('不需要 Key 的本地模型（Ollama）不填 Key 也能通过', async () => {
+    const result = await testModelConnection({
+      provider: 'ollama',
+      apiUrl: 'http://localhost:11434/v1',
+      apiKey: '',
+      modelName: 'qwen2.5:7b',
+      contextWindow: 20,
+    });
+    expect(result).toMatchObject({ ok: true, mode: 'format-only' });
+    expect(httpClient.post).not.toHaveBeenCalled();
+  });
 });

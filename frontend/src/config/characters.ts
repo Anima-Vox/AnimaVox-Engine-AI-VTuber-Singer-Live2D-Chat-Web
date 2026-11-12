@@ -9,15 +9,6 @@
 
 export type CharacterOrigin = 'official' | 'custom';
 
-/** 右侧展示框里放什么 */
-export type CharacterVisual =
-  /** 形象还在制作中：显示占位文字 */
-  | { kind: 'placeholder'; caption: string; note: string }
-  /** 静态立绘 */
-  | { kind: 'image'; src: string; alt: string }
-  /** Live2D 模型（Phase 2 接入渲染器） */
-  | { kind: 'live2d'; modelUrl: string };
-
 export interface CharacterProfile {
   /** 与后端约定的角色 ID，写进会话记录与对话请求 */
   id: string;
@@ -35,7 +26,6 @@ export interface CharacterProfile {
   greeting: string;
   /** 空对话时的建议话题，点一下就会直接发送 */
   suggestions: readonly string[];
-  visual: CharacterVisual;
 }
 
 export const OFFICIAL_CHARACTERS: readonly CharacterProfile[] = [
@@ -49,7 +39,6 @@ export const OFFICIAL_CHARACTERS: readonly CharacterProfile[] = [
     tagline: '来自平行世界的 18 岁上海女生',
     greeting: '嗨，我是佳尹。今天想聊点什么？',
     suggestions: ['最近在忙什么？', '给我推荐一首歌吧', '你有在玩什么游戏呀？'],
-    visual: { kind: 'placeholder', caption: '立绘制作中', note: 'Phase 2' },
   },
   {
     id: 'yuchengnuo',
@@ -61,7 +50,6 @@ export const OFFICIAL_CHARACTERS: readonly CharacterProfile[] = [
     tagline: '治愈系的元气女大生',
     greeting: '嘿嘿～我是阿糯！今天过得怎么样呀？',
     suggestions: ['今天有点累，陪我聊聊', '最近在追什么番？', '推荐一杯奶茶吧'],
-    visual: { kind: 'placeholder', caption: '形象制作中', note: 'Phase 2' },
   },
 ];
 

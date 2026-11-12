@@ -45,43 +45,17 @@
 
 @layer components {
   /*
-   * 右侧拱形展示框（造型来自《李佳尹 角色资料介绍》第一页的立绘框）：
-   * 上方半圆、下方小圆角，白 → 蓝 → 深夜蓝的渐变，内圈一道虚线。
-   * 外层 .stage-slot 是尺寸容器，展示框按 2:5 的比例尽量撑满。
+   * Live2D 预留位置（Live2DSlot）：外层 .live2d-layer 铺满消息区并作为尺寸容器，
+   * 里面的 .live2d-slot 宽高比 1080 : 1170，高度取「消息区高度的 70%」与「对话栏宽度换算出的高度」中较小的，
+   * 所以宽度永远不会超过对话栏。完全透明，没有任何外框。
    */
-  .stage-slot {
+  .live2d-layer {
     container-type: size;
-    display: grid;
-    place-items: center;
   }
 
-  .stage-frame {
-    --frame-w: min(86cqw, calc(100cqh * 2 / 5));
-    --frame-inset: 0.9rem;
-    --frame-foot: 1.1rem;
-    position: relative;
-    overflow: hidden;
-    width: var(--frame-w);
-    aspect-ratio: 2 / 5;
-    border: 1px solid rgb(61 99 232 / 0.22);
-    border-radius: calc(var(--frame-w) / 2) calc(var(--frame-w) / 2) var(--frame-foot)
-      var(--frame-foot);
-    background:
-      radial-gradient(60% 32% at 50% 30%, rgb(255 255 255 / 0.6), transparent 70%),
-      linear-gradient(180deg, #ffffff 0%, #e6ecfb 26%, #b9c8f4 54%, #5a77d6 80%, #182544 100%);
-    /* 渐变从边框外缘开始画，避免底色在顶部边框下重复出现一道深色线 */
-    background-origin: border-box;
-    background-repeat: no-repeat;
-    box-shadow: 0 2.2rem 3.5rem -2rem rgb(22 33 58 / 0.5);
-  }
-
-  .stage-frame-inner {
-    position: absolute;
-    inset: var(--frame-inset);
-    border: 1px dashed rgb(61 99 232 / 0.35);
-    border-radius: calc(var(--frame-w) / 2 - var(--frame-inset))
-      calc(var(--frame-w) / 2 - var(--frame-inset)) calc(var(--frame-foot) - 0.35rem)
-      calc(var(--frame-foot) - 0.35rem);
+  .live2d-slot {
+    height: min(70cqh, 100cqw * 1170 / 1080);
+    aspect-ratio: 1080 / 1170;
   }
 
   .thin-scrollbar {

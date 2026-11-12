@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react';
 import { ChatHeader } from './components/chat/ChatHeader';
 import { Composer } from './components/chat/Composer';
 import { MessageList } from './components/chat/MessageList';
+import { Live2DSlot } from './components/live2d/Live2DSlot';
 import { NavRail, type PanelId } from './components/nav/NavRail';
 import { ApiPanel } from './components/sidebar/ApiPanel';
 import { CharactersPanel } from './components/sidebar/CharactersPanel';
 import { ConversationsPanel } from './components/sidebar/ConversationsPanel';
 import { PersonaPanel } from './components/sidebar/PersonaPanel';
 import { SettingsPanel } from './components/sidebar/SettingsPanel';
-import { CharacterStage } from './components/stage/CharacterStage';
 import { getCharacter, OFFICIAL_CHARACTERS } from './config/characters';
 import { useT } from './i18n';
 import { chatTransport } from './services/chat';
@@ -18,8 +18,8 @@ import { useLocaleStore } from './stores/localeStore';
 
 /**
  * 主界面（以 2560 × 1440 为基准）：
- * 左 1/4 = 菜单栏 + 侧边列表；中 2/4 = 对话；右 1/4 = 角色展示框（之后放 Live2D）。
- * 宽度不足 1200px 时隐藏展示框，不足 800px 时再隐藏侧边列表。
+ * 左 1/4 = 菜单栏 + 侧边列表；右 3/4 = 对话，对话区中间、消息后面是 Live2D 预留位置（透明、无框）。
+ * 宽度不足 800px 时隐藏侧边列表。
  */
 export function App() {
   const [panel, setPanel] = useState<PanelId>('conversations');
@@ -66,7 +66,7 @@ export function App() {
   }
 
   return (
-    <div className="grid h-full grid-cols-[minmax(0,1fr)_minmax(0,3fr)] max-[800px]:grid-cols-[auto_minmax(0,1fr)] min-[1200px]:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)]">
+    <div className="grid h-full grid-cols-[minmax(0,1fr)_minmax(0,3fr)] max-[800px]:grid-cols-[auto_minmax(0,1fr)]">
       <div className="flex min-h-0">
         <NavRail active={panel} onSelect={setPanel} />
         <div className="flex min-h-0 min-w-0 flex-1 border-r border-mist-deep max-[800px]:hidden">
@@ -95,17 +95,23 @@ export function App() {
 
       <main className="flex min-h-0 min-w-0 flex-col">
         <ChatHeader character={character} title={activeTitle} mode={chatTransport.mode} />
-        <MessageList
-          key={`${character.id}:${chat.conversationId ?? 'new'}`}
-          character={character}
-          messages={chat.messages}
-          isLoading={isLoading}
-          isWaiting={isWaiting}
-          notice={chat.notice}
-          onPick={(text) => void chat.send(text)}
-          onRetry={() => void chat.retry()}
-          onDismiss={chat.dismissNotice}
-        />
+        {/* 消息区：Live2D 预留位置在后（z-0），消息在前（z-10） */}
+        <div className="relative flex min-h-0 flex-1 flex-col">
+          <Live2DSlot />
+          <div className="relative z-10 flex min-h-0 flex-1 flex-col">
+            <MessageList
+              key={`${character.id}:${chat.conversationId ?? 'new'}`}
+              character={character}
+              messages={chat.messages}
+              isLoading={isLoading}
+              isWaiting={isWaiting}
+              notice={chat.notice}
+              onPick={(text) => void chat.send(text)}
+              onRetry={() => void chat.retry()}
+              onDismiss={chat.dismissNotice}
+            />
+          </div>
+        </div>
         <Composer
           placeholder={t.chat.placeholder(character)}
           isWaiting={isWaiting}
@@ -114,10 +120,6 @@ export function App() {
           onStop={chat.stop}
         />
       </main>
-
-      <div className="hidden min-h-0 min-[1200px]:flex">
-        <CharacterStage character={character} isThinking={isWaiting} />
-      </div>
     </div>
   );
 }

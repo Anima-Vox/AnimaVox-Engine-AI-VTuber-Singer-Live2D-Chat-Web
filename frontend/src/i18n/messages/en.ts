@@ -88,10 +88,4 @@ export const en: Messages = {
       save: "This message couldn't be saved in your browser, so it wasn't sent. Please send it again.",
     },
   },
-  stage: {
-    label: (character) => `Portrait of ${character.englishName}`,
-    online: 'Online',
-    typing: 'Typing…',
-    live2dPending: 'Live2D in preparation',
-  },
 };

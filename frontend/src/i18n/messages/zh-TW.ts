@@ -84,10 +84,4 @@ export const zhTW: Messages = {
       save: '這句話沒能保存到瀏覽器，所以沒有發出去，請再發一次。',
     },
   },
-  stage: {
-    label: (character) => `${character.name}的形象`,
-    online: '在線',
-    typing: '正在輸入…',
-    live2dPending: 'Live2D 準備中',
-  },
 };

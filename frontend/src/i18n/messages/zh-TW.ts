@@ -45,7 +45,6 @@ export const zhTW: Messages = {
     customSoon: '自定義 API 設置即將開放。',
     channel: '對話通道',
     channels: { mock: '演示（瀏覽器內假後端）', http: '自家後端' },
-    backendUrl: '後端地址',
     customNote: '使用者自己創建的角色可以接入自己的模型與 API（開源引擎功能，即將開放）。',
   },
   settings: {

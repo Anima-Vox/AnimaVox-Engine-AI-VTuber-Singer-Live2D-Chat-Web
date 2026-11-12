@@ -16,7 +16,6 @@
     "@ai-live2d/shared": "*",
     "clsx": "^2.1.1",
     "dexie": "^4.0.11",
-    "ky": "^1.7.5",
     "lxgw-wenkai-webfont": "^1.7.0",
     "nanoid": "^5.0.9",
     "react": "^18.3.1",

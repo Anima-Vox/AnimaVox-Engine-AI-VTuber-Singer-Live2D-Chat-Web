@@ -49,7 +49,6 @@ export const zhCN = {
     customSoon: '自定义 API 设置即将开放。',
     channel: '对话通道',
     channels: { mock: '演示（浏览器内假后端）', http: '自家后端' },
-    backendUrl: '后端地址',
     customNote: '使用者自己创建的角色可以接入自己的模型与 API（开源引擎功能，即将开放）。',
   },
   settings: {

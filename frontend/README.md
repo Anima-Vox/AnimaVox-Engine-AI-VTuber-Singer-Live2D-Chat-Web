@@ -49,18 +49,11 @@ npm run dev:frontend
 
 打开 <http://localhost:5173>。
 
-## 假后端 / 真实后端切换
+## 接上自己的接口
 
-复制 `frontend/.env.example` 为 `frontend/.env.local`，修改：
+这是纯净版：没有后端，也没有 HTTP 接口，对话只走浏览器内的演示回复。接法见仓库根目录的 [纯净版说明](../纯净版说明.md)。
 
-| 变量                  | 取值                         | 作用                                       |
-| --------------------- | ---------------------------- | ------------------------------------------ |
-| `VITE_CHAT_TRANSPORT` | `mock`（默认）/ `http`       | `mock` = 浏览器内假后端；`http` = 自家后端 |
-| `VITE_API_URL`        | 默认 `http://localhost:3001` | 后端地址，只在 `http` 模式使用             |
-
-切到 `http` 后用 `npm run dev`（同时启动前后端）。修改 `.env.local` 后要重启 dev server。
-
-假后端的小技巧：发送「模拟错误」会故意返回一次服务器错误，可以查看出错提示与重试按钮。
+演示回复的小技巧：发送「模拟错误」会故意返回一次错误，可以查看出错提示与重试按钮。
 
 ## 和后端的约定
 
@@ -97,11 +90,10 @@ npm run dev:frontend
 src/
 ├── App.tsx                      主页布局（置中的对话栏）与二级页面切换
 ├── config/
-│   ├── app.ts                   通道、后端地址、超时、上下文条数
+│   ├── app.ts                   通道种类、模型标识、上下文条数
 │   └── characters.ts            角色注册表（官方 / 自定义、开场白、建议话题）
 ├── services/chat/
 │   ├── types.ts                 ChatTransport 接口（前后端唯一的接缝）
-│   ├── httpTransport.ts         真实后端
 │   ├── mockTransport.ts         假后端
 │   ├── mockReplies.ts           假后端台词表（按角色）
 │   └── errors.ts                错误分类与中文提示

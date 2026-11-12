@@ -1,8 +1,7 @@
-import { UpdateMeRequestSchema, type User } from '@shared';
+import { DeleteMeRequestSchema, UpdateMeRequestSchema, type User } from '@shared';
 import type { FastifyPluginAsync } from 'fastify';
-import { z } from 'zod';
 import { verifyPassword } from '../auth/password';
-import { nowOf, parseBody, requireUser, type AppDeps } from '../context';
+import { parseBody, requireUser, type AppDeps } from '../context';
 import { ApiError } from '../errors';
 import {
   deleteUser,
@@ -13,31 +12,33 @@ import {
   type StoredUser,
 } from '../store';
 
-const DeleteMeRequestSchema = z.object({ password: z.string().min(1) });
-
+/** 目前登录的帐号：读资料、改用户名、撤回训练同意、删除帐号（接口约定 v1 第三节） */
 export function meRoutes(deps: AppDeps): FastifyPluginAsync {
-  const reload = (user: StoredUser): User =>
-    publicUser(findUserById(deps.db, user.id) as StoredUser);
+  const { db } = deps;
+
+  /** 改完之后重新读出最新的资料回给前端 */
+  const reload = (id: string): User => publicUser(findUserById(db, id) as StoredUser);
 
   return async (app) => {
+    /* ---------- 读自己的资料（前端打开页面时用它确认登录还有效） ---------- */
     app.get('/api/me', async (request): Promise<User> => publicUser(requireUser(request, deps)));
 
-    /** 改用户名（佳尹与阿糯之后就用新名字称呼） */
+    /* ---------- 改用户名（角色之后就用新名字称呼） ---------- */
     app.patch('/api/me', async (request): Promise<User> => {
       const user = requireUser(request, deps);
       const { username } = parseBody(UpdateMeRequestSchema, request.body);
-      renameUser(deps.db, user.id, username);
-      return reload(user);
+      renameUser(db, user.id, username);
+      return reload(user.id);
     });
 
-    /** 撤回训练同意：只能撤回，不能再开启；撤回前已训练进模型的部分不受影响 */
+    /* ---------- 撤回训练同意（只能撤回，不能再开启） ---------- */
     app.post('/api/me/consent/withdraw', async (request): Promise<User> => {
       const user = requireUser(request, deps);
-      withdrawConsent(deps.db, user.id, nowOf(deps).toISOString());
-      return reload(user);
+      withdrawConsent(db, user.id, new Date().toISOString());
+      return reload(user.id);
     });
 
-    /** 删除帐号与全部对话；需要再输入一次密码 */
+    /* ---------- 删除帐号与全部对话（要再输入一次密码） ---------- */
     app.delete('/api/me', async (request, reply) => {
       const user = requireUser(request, deps);
       const { password } = parseBody(DeleteMeRequestSchema, request.body);
@@ -47,7 +48,7 @@ export function meRoutes(deps: AppDeps): FastifyPluginAsync {
           field: 'password',
         });
       }
-      deleteUser(deps.db, user.id);
+      deleteUser(db, user.id);
       return reply.code(204).send();
     });
   };

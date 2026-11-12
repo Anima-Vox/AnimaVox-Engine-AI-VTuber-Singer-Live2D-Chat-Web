@@ -9,6 +9,11 @@ import { ConsentNotice } from './ConsentNotice';
 
 type Tab = 'login' | 'register';
 
+/* ============================================================
+ * 两个表单共用的小零件
+ * ============================================================ */
+
+/** 一个栏位：上面是名称（label），中间是输入框，下面是可有可无的小字说明（hint） */
 function Field({
   label,
   hint,
@@ -35,11 +40,13 @@ function Field({
   );
 }
 
+/** 输入框与主要按钮的样式 */
 const INPUT =
   'w-full rounded-xl border border-mist-deep bg-white px-4 py-2.5 text-[0.95rem] text-ink outline-none transition-shadow placeholder:text-haze/60 focus:border-signal/50 focus:ring-4 focus:ring-signal/10';
 const PRIMARY =
   'rounded-full bg-ink px-5 py-2.5 text-[0.9rem] text-white transition-colors hover:bg-night-raised disabled:cursor-not-allowed disabled:opacity-40';
 
+/** 表单底部的红色错误提示；没有错误时不显示 */
 function ErrorLine({ text }: { text: string | null }) {
   return text ? (
     <p role="alert" className="rounded-xl bg-alert-soft px-4 py-2.5 text-[0.85rem] text-alert">
@@ -47,6 +54,10 @@ function ErrorLine({ text }: { text: string | null }) {
     </p>
   ) : null;
 }
+
+/* ============================================================
+ * 登录表单：邮箱 + 密码
+ * ============================================================ */
 
 function LoginForm() {
   const t = useT();
@@ -104,6 +115,12 @@ function LoginForm() {
   );
 }
 
+/* ============================================================
+ * 注册表单，分两步：
+ * 1. form：填邮箱 → 寄验证码 → 填验证码、密码、用户名
+ * 2. notice：看完注册说明（必须滑到底），选择是否同意用于训练 → 送出注册
+ * ============================================================ */
+
 function RegisterForm() {
   const t = useT();
   const requestEmailCode = useAuthStore((state) => state.requestEmailCode);
@@ -116,9 +133,12 @@ function RegisterForm() {
   const [step, setStep] = useState<'form' | 'notice'>('form');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** 验证码寄出后显示的提示（还没接寄信服务时，验证码也显示在这里） */
   const [sentInfo, setSentInfo] = useState<string | null>(null);
+  /** 还要等几秒才能再寄验证码；0 = 可以寄 */
   const [cooldown, setCooldown] = useState(0);
 
+  // 倒数：每秒减一，直到 0
   useEffect(() => {
     if (cooldown <= 0) {
       return;
@@ -127,6 +147,7 @@ function RegisterForm() {
     return () => clearTimeout(timer);
   }, [cooldown]);
 
+  /** 按「寄验证码」 */
   async function handleSendCode() {
     setError(null);
     if (!EmailSchema.safeParse(email).success) {
@@ -147,6 +168,7 @@ function RegisterForm() {
     }
   }
 
+  /** 按「下一步」：先在前端检查每一栏，都合格才进到注册说明 */
   function handleNext(event: FormEvent) {
     event.preventDefault();
     setError(null);
@@ -163,6 +185,7 @@ function RegisterForm() {
     }
   }
 
+  /** 在注册说明选了「同意」或「不同意」：送出注册，成功后直接进入主界面 */
   async function handleChoose(trainingConsent: boolean) {
     setBusy(true);
     setError(null);
@@ -273,7 +296,11 @@ function RegisterForm() {
   );
 }
 
-/** 接后端（http）时的登录 / 注册页；确认登录状态期间只显示一行提示 */
+/* ============================================================
+ * 整个登录 / 注册页
+ * ============================================================ */
+
+/** 没登录时显示：上面是 LOGO，下面用标签页切换登录与注册；确认登录状态期间只显示一行提示 */
 export function AuthScreen({ status }: { status: AuthStatus }) {
   const t = useT().auth;
   const [tab, setTab] = useState<Tab>('login');

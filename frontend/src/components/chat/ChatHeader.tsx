@@ -1,4 +1,3 @@
-import type { ChatTransportMode } from '../../config/app';
 import type { CharacterProfile } from '../../config/characters';
 import { useT } from '../../i18n';
 
@@ -6,11 +5,10 @@ interface ChatHeaderProps {
   character: CharacterProfile;
   /** 当前对话的标题；新对话还没有标题 */
   title: string | null;
-  mode: ChatTransportMode;
 }
 
-/** 对话区顶栏：当前对话标题 + 演示模式提示 */
-export function ChatHeader({ character, title, mode }: ChatHeaderProps) {
+/** 对话区顶栏：角色名字 + 目前对话的标题 */
+export function ChatHeader({ character, title }: ChatHeaderProps) {
   const t = useT();
   return (
     <header className="flex h-[4.5rem] shrink-0 items-center justify-between gap-4 px-8">
@@ -19,11 +17,6 @@ export function ChatHeader({ character, title, mode }: ChatHeaderProps) {
         <span className="font-voice">{character.name} · </span>
         {title ?? t.conversations.untitled}
       </h1>
-      {mode === 'mock' && (
-        <p className="shrink-0 rounded-full bg-mist-deep px-3.5 py-1.5 text-[0.8rem] text-haze">
-          {t.chat.demoBadge}
-        </p>
-      )}
     </header>
   );
 }

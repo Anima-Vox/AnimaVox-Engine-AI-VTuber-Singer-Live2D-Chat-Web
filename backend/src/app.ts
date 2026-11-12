@@ -1,4 +1,3 @@
-import cors from '@fastify/cors';
 import Fastify, { type FastifyServerOptions } from 'fastify';
 import type { AppDeps } from './context';
 import { toApiError } from './errors';
@@ -9,30 +8,21 @@ import { healthRoutes } from './routes/health';
 import { meRoutes } from './routes/me';
 
 /**
- * 建立后端应用（不监听端口）。server.ts 负责启动；测试直接用 app.inject 发请求。
- * 所有接口都在 /api 底下（正式环境前后端同一个网域，/api 交给后端）。
+ * 建立后端应用（还不监听端口）：server.ts 负责启动，测试直接对它发请求。
+ * 所有接口都在 /api 底下：前后端同一个网域，/api 开头的请求交给后端（接口约定第 7 条）。
  */
 export async function buildApp(deps: AppDeps, options: FastifyServerOptions = {}) {
   const app = Fastify(options);
 
-  const origins = deps.env.CORS_ORIGIN.split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
-  await app.register(cors, {
-    origin: origins,
-    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  });
+  /* ---------- 错误格式：所有失败都回 { code, message, retryable, reason?, field? } ---------- */
+  // 要在注册路由之前设定，路由才会套用
 
-  // 错误处理器要在注册路由之前设定，路由才会继承
-  // 找不到的路径也按约定格式回
   app.setNotFoundHandler((_request, reply) => {
     reply
       .code(404)
       .send({ code: 'API_ERROR', message: '没有这个接口', retryable: false, reason: 'NOT_FOUND' });
   });
 
-  // 所有错误都转成 { code, message, retryable, reason?, field? }
   app.setErrorHandler((error, request, reply) => {
     const apiError = toApiError(error);
     if (apiError.status >= 500) {
@@ -41,7 +31,9 @@ export async function buildApp(deps: AppDeps, options: FastifyServerOptions = {}
     reply.code(apiError.status).send(apiError.toBody());
   });
 
-  await app.register(healthRoutes(deps));
+  /* ---------- 路由：每个文件一组接口 ---------- */
+
+  await app.register(healthRoutes);
   await app.register(authRoutes(deps));
   await app.register(meRoutes(deps));
   await app.register(conversationRoutes(deps));

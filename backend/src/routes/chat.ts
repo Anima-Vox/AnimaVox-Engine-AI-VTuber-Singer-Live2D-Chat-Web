@@ -1,9 +1,9 @@
-import { SendMessageRequestSchema, type Message, type SendMessageResponse } from '@shared';
+import { SendMessageRequestSchema, type SendMessageResponse } from '@shared';
 import type { FastifyPluginAsync } from 'fastify';
-import { loadPersona, type OfficialCharacterId } from '../characters';
-import { dayKey, nowOf, parseBody, requireUser, type AppDeps } from '../context';
+import { assertCharacter } from '../characters';
+import { parseBody, requireUser, type AppDeps } from '../context';
 import { ApiError, invalidInput, notFound } from '../errors';
-import { buildSystemPrompt } from '../services/llm/prompt';
+import type { LlmInput, ModelReply } from '../services/llm/types';
 import {
   addUsage,
   countUserMessages,
@@ -13,44 +13,44 @@ import {
   insertReply,
   insertUserMessage,
   recentMessages,
-  titleFromFirstMessage,
   touchConversation,
   usageToday,
 } from '../store';
-import { assertCharacter } from './conversations';
 
-/** 等模型回复；超时回 SERVICE_UNSTABLE，其他失败一律当成 MODEL_UNAVAILABLE */
-async function askModel(deps: AppDeps, input: Parameters<AppDeps['llm']['reply']>[0]) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), deps.env.LLM_TIMEOUT_MS);
-  try {
-    return await deps.llm.reply(input, controller.signal);
-  } catch (error) {
-    if (controller.signal.aborted) {
-      throw new ApiError('SERVICE_UNSTABLE', '等待模型回复超时');
-    }
-    if (error instanceof ApiError) {
-      throw error;
-    }
-    throw new ApiError('MODEL_UNAVAILABLE', '模型连接失败');
-  } finally {
-    clearTimeout(timer);
-  }
+/** 每日额度按北京时间（UTC+8）的日期计算，回传例如 '2026-11-13' */
+function dayKey(date: Date): string {
+  return new Date(date.getTime() + 8 * 3600_000).toISOString().slice(0, 10);
 }
 
+/** POST /api/chat：送出一句话，拿到角色的回复（接口约定 v1 第四、五、六节） */
 export function chatRoutes(deps: AppDeps): FastifyPluginAsync {
+  const { db, env, llm } = deps;
+
+  /** 请模型回复。等太久回 SERVICE_UNSTABLE；其他失败一律回 MODEL_UNAVAILABLE */
+  async function askModel(input: LlmInput): Promise<ModelReply> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), env.LLM_TIMEOUT_MS);
+    try {
+      return await llm.reply(input, controller.signal);
+    } catch (error) {
+      if (controller.signal.aborted) {
+        throw new ApiError('SERVICE_UNSTABLE', '等待模型回复超时');
+      }
+      throw error instanceof ApiError ? error : new ApiError('MODEL_UNAVAILABLE', '模型连接失败');
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   return async (app) => {
-    /**
-     * 送出一句话，拿到角色的回复。
-     * clientMessageId 就是这条用户消息的 id：重复送出不会重复写入；
-     * 已经有回复就直接回传，没有回复（上次失败）就重新产生——这就是重试。
-     */
     app.post('/api/chat', async (request): Promise<SendMessageResponse> => {
+      /* ---------- 1. 要登录；内容要合格；characterId 必填而且要有这个角色 ---------- */
       const user = requireUser(request, deps);
       const input = parseBody(SendMessageRequestSchema, request.body);
       assertCharacter(input.characterId);
 
-      const conversation = findConversation(deps.db, user.id, input.conversationId);
+      /* ---------- 2. 对话要是自己的，而且属于这个角色 ---------- */
+      const conversation = findConversation(db, user.id, input.conversationId);
       if (!conversation) {
         throw notFound('找不到这个对话');
       }
@@ -58,26 +58,31 @@ export function chatRoutes(deps: AppDeps): FastifyPluginAsync {
         throw invalidInput('这个对话不属于这个角色', 'characterId');
       }
 
-      let userMessage: Message | null = findMessage(deps.db, user.id, input.clientMessageId);
+      /* ---------- 3. 去重：这个 clientMessageId 以前送过吗？ ---------- */
+      let userMessage = findMessage(db, user.id, input.clientMessageId);
       if (userMessage) {
         if (userMessage.conversationId !== conversation.id || userMessage.role !== 'user') {
-          throw invalidInput('clientMessageId 已经用在别的地方', 'clientMessageId');
+          throw invalidInput('clientMessageId 已经用在别的消息上', 'clientMessageId');
         }
-        const existingReply = findReplyTo(deps.db, user.id, userMessage.id);
+        // 送过、也已经有回复：把原本的回复再回一次，不重新产生
+        const existingReply = findReplyTo(db, user.id, userMessage.id);
         if (existingReply) {
           return { conversation, userMessage, reply: existingReply };
         }
+        // 送过、但还没有回复（上次失败）：继续往下重新请模型回复，这就是「重试」
       }
 
-      const now = nowOf(deps);
+      /* ---------- 4. 今天的额度还有吗？ ---------- */
+      const now = new Date();
       const day = dayKey(now);
-      if (usageToday(deps.db, user.id, day) >= deps.env.DAILY_MESSAGE_LIMIT) {
+      if (usageToday(db, user.id, day) >= env.DAILY_MESSAGE_LIMIT) {
         throw new ApiError('QUOTA_EXCEEDED', '今天的对话额度已经用完');
       }
 
+      /* ---------- 5. 第一次送：存下用户这句话（对话的第一句同时当标题，取前 24 个字） ---------- */
       if (!userMessage) {
-        const isFirst = countUserMessages(deps.db, user.id, conversation.id) === 0;
-        insertUserMessage(deps.db, {
+        const isFirst = countUserMessages(db, user.id, conversation.id) === 0;
+        insertUserMessage(db, {
           id: input.clientMessageId,
           userId: user.id,
           conversationId: conversation.id,
@@ -85,51 +90,47 @@ export function chatRoutes(deps: AppDeps): FastifyPluginAsync {
           trainingAllowed: user.trainingConsent,
           now: now.toISOString(),
         });
-        touchConversation(deps.db, {
+        touchConversation(db, {
           userId: user.id,
           id: conversation.id,
           now: now.toISOString(),
-          ...(isFirst ? { title: titleFromFirstMessage(input.content) } : {}),
+          ...(isFirst ? { title: input.content.replace(/\s+/g, ' ').slice(0, 24) } : {}),
         });
-        userMessage = findMessage(deps.db, user.id, input.clientMessageId) as Message;
+        userMessage = findMessage(db, user.id, input.clientMessageId)!;
       }
 
-      const history = recentMessages(
-        deps.db,
-        user.id,
-        conversation.id,
-        deps.env.CONTEXT_WINDOW,
-      ).map((message) => ({ role: message.role, content: message.content }));
-      const persona = loadPersona(input.characterId as OfficialCharacterId, deps.env.PERSONA_DIR);
-      const response = await askModel(deps, {
+      /* ---------- 6. 带上最近的对话，请模型回复 ---------- */
+      const history = recentMessages(db, user.id, conversation.id, env.CONTEXT_WINDOW);
+      const reply = await askModel({
         characterId: input.characterId,
         username: user.username,
-        systemPrompt: buildSystemPrompt(persona, user.username),
-        history,
+        history: history.map(({ role, content }) => ({ role, content })),
       });
 
-      const repliedAt = nowOf(deps);
-      const inserted = insertReply(deps.db, {
+      /* ---------- 7. 存下回复；真的存进去了才计入今天的额度 ---------- */
+      // 等模型的期间，用户可能已经把这个对话删掉了
+      if (!findConversation(db, user.id, conversation.id)) {
+        throw notFound('这个对话已经被删除');
+      }
+      const repliedAt = new Date().toISOString();
+      const isNewReply = insertReply(db, {
         userId: user.id,
         conversationId: conversation.id,
         replyTo: userMessage.id,
-        response,
+        reply,
         trainingAllowed: user.trainingConsent,
-        now: repliedAt.toISOString(),
+        now: repliedAt,
       });
-      if (inserted) {
-        addUsage(deps.db, user.id, day);
-        touchConversation(deps.db, {
-          userId: user.id,
-          id: conversation.id,
-          now: repliedAt.toISOString(),
-        });
+      if (isNewReply) {
+        addUsage(db, user.id, day);
+        touchConversation(db, { userId: user.id, id: conversation.id, now: repliedAt });
       }
 
+      /* ---------- 8. 回传：最新的对话资料（标题、时间）、用户这句话、角色的回复 ---------- */
       return {
-        conversation: findConversation(deps.db, user.id, conversation.id) ?? conversation,
+        conversation: findConversation(db, user.id, conversation.id)!,
         userMessage,
-        reply: findReplyTo(deps.db, user.id, userMessage.id) as Message,
+        reply: findReplyTo(db, user.id, userMessage.id)!,
       };
     });
   };

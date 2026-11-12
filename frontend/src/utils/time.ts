@@ -1,7 +1,4 @@
-/** 当前时间的 ISO 字符串（全项目统一的时间戳格式） */
-export function nowIso(): string {
-  return new Date().toISOString();
-}
+/** 后端给的时间都是 ISO 字串；这里把它们转成界面上显示的样子 */
 
 function pad(value: number): string {
   return value.toString().padStart(2, '0');

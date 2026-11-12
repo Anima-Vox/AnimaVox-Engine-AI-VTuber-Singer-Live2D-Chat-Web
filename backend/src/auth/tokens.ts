@@ -1,10 +1,11 @@
 import { createHash, randomBytes, randomInt } from 'node:crypto';
 
-/** 登录 token：只交给前端一次，数据库只存它的 SHA-256，外泄的数据库无法直接拿来登录 */
+/** 登录 token：一长串随机字，只在登录成功时交给前端一次 */
 export function createToken(): string {
   return randomBytes(32).toString('base64url');
 }
 
+/** 数据库里只存 token 与验证码的 SHA-256，即使数据库外泄也不能直接拿来登录 */
 export function sha256(text: string): string {
   return createHash('sha256').update(text).digest('hex');
 }

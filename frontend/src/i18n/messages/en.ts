@@ -45,9 +45,6 @@ export const en: Messages = {
     locked: (character) =>
       `${character.englishName} always uses the official model and API. No key is needed, and you can't enter your own.`,
     customSoon: 'Custom API settings coming soon.',
-    channel: 'Chat channel',
-    channels: { mock: 'Demo (in-browser mock backend)', http: 'Own backend' },
-    backendUrl: 'Backend URL',
     customNote:
       'Characters you create yourself can connect their own model and API (open-source engine feature, coming soon).',
   },
@@ -55,15 +52,13 @@ export const en: Messages = {
     title: 'Settings',
     language: 'Language',
     history: 'Chat history',
-    historyValue: 'Stored only in this browser',
-    historyServer: 'Stored on the server, visible on any device',
+    historyValue: 'Stored on the server, visible on any device',
     engine: 'Engine',
     engineValue: 'AnimaVox',
     version: 'Version',
     versionValue: 'Text chat 0.2',
   },
   chat: {
-    demoBadge: 'Demo mode: replies come from a mock backend',
     you: 'You said',
     says: (character) => `${character.englishName} said`,
     typing: (character) => `${character.englishName} is typing`,
@@ -78,18 +73,13 @@ export const en: Messages = {
     failed: (reason) => `No reply received. ${reason}`,
     retry: 'Retry',
     close: 'Dismiss',
-    server: (status, detail) =>
-      `Server error${status ? ` (${status})` : ''}${detail ? `: ${detail}` : '.'}`,
     reasons: {
       unanswered: "This message hasn't received a reply yet.",
-      history: "Couldn't read the local chat history. You can still send new messages.",
       aborted: 'Stopped waiting for the reply.',
       timeout: 'No response for too long. Please try again later.',
       network: "Can't reach the server. Check your network or make sure the backend is running.",
       invalid_response:
         'The server returned data in the wrong format. Please ask the backend team to check.',
-      unknown: 'Something went wrong. Please try again.',
-      save: "This message couldn't be saved in your browser, so it wasn't sent. Please send it again.",
       api_error: "The request didn't go through. Please try again.",
       model_unavailable: "Can't reach the model right now. Please try again later.",
       service_unstable: 'The server or network is unstable. Please try again later.',
@@ -165,6 +155,5 @@ export const en: Messages = {
     deletePrompt:
       'This permanently deletes your account and all chats. Enter your password to confirm:',
     confirmDelete: 'Delete',
-    error: "That didn't work. Please try again.",
   },
 };

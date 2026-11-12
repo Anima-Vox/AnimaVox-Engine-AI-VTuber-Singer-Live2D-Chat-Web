@@ -1,33 +1,30 @@
-import type { LLMResponse } from '../schemas/llm';
+import type { CharacterId } from '../../characters';
+import type { ModelReply } from './types';
 
 /**
- * 演示用台词表（仅供体验界面，正式回复由后端的 LLM 生成）。
- * 前端的浏览器内演示回复与后端的 Mock 适配器共用这一份，两边回的话一致。
- * 每条都是完整的结构化 JSON：emotion / action / expression / text / tool_calls，
- * 字段取值都在 项目规格说明书 3.3 的枚举表内。
- * 关键词同时接受简体与繁体输入。
+ * 演示台词表：还没接真实模型时，Mock 模型（mockAdapter.ts）照这里回复。
+ * 每个角色一份：先看用户这句话有没有命中关键词（rules），都没命中就用兜底回复（fallbacks）。
+ * 关键词同时接受简体与繁体；emotion / action / expression 的取值见项目规格说明书 3.3。
  */
 
-interface ReplyRule {
-  pattern: RegExp;
-  reply: LLMResponse;
+interface MockScript {
+  rules: { pattern: RegExp; reply: ModelReply }[];
+  fallbacks: ModelReply[];
 }
 
-export interface MockScript {
-  rules: readonly ReplyRule[];
-  /** 没有命中任何关键词时轮流使用 */
-  fallbacks: readonly [LLMResponse, ...LLMResponse[]];
+function reply(emotion: string, action: string, expression: string, text: string): ModelReply {
+  return { emotion, action, expression, text };
 }
 
-function reply(emotion: string, action: string, expression: string, text: string): LLMResponse {
-  return { emotion, action, expression, text, tool_calls: [] };
-}
+/* ---------- 两个角色共用的关键词 ---------- */
 
 const GREETING = /(你好|您好|哈喽|哈囉|嗨|hi|hello|在吗|在嗎|早安|晚安|早上好|晚上好)/i;
 const DOWN = /(累|难过|難過|伤心|傷心|不开心|不開心|压力|壓力|烦|煩|emo)/i;
 const PRAISE = /(喜欢你|喜歡你|可爱|可愛|好看|厉害|厲害)/;
 const RUDE = /(讨厌|討厭|笨蛋|滚|滾)/;
 const QUESTION = /(什么|什麼|为什么|為什麼|怎么|怎麼|吗|嗎|？|\?)/;
+
+/* ---------- 李佳尹 ---------- */
 
 const JIAYIN: MockScript = {
   rules: [
@@ -80,6 +77,8 @@ const JIAYIN: MockScript = {
   ],
 };
 
+/* ---------- 羽澄糯（阿糯） ---------- */
+
 const NUO: MockScript = {
   rules: [
     {
@@ -111,34 +110,17 @@ const NUO: MockScript = {
   ],
 };
 
-const SCRIPTS: Record<string, MockScript> = {
+const SCRIPTS: Record<CharacterId, MockScript> = {
   lijiaying: JIAYIN,
   yuchengnuo: NUO,
 };
 
-/** 没有专属台词的角色使用李佳尹的台词表 */
-export function getMockScript(characterId: string | undefined): MockScript {
-  return (characterId ? SCRIPTS[characterId] : undefined) ?? JIAYIN;
-}
-
-/** 稳定哈希：同一句话永远拿到同一条兜底回复，方便复现 */
-function stableHash(text: string): number {
-  let hash = 0;
-  for (let index = 0; index < text.length; index += 1) {
-    hash = (hash * 31 + text.charCodeAt(index)) % 1_000_000_007;
-  }
-  return hash;
-}
-
-/** 按角色与用户这句话挑一条演示回复（返回副本，调用方可以放心修改） */
-export function pickMockReply(characterId: string | undefined, userText: string): LLMResponse {
-  const { rules, fallbacks } = getMockScript(characterId);
+/** 按角色与用户这句话挑一条回复；同一句话永远拿到同一条 */
+export function pickMockReply(characterId: CharacterId, userText: string): ModelReply {
+  const { rules, fallbacks } = SCRIPTS[characterId];
   const rule = rules.find((item) => item.pattern.test(userText));
-  const picked = rule
-    ? rule.reply
-    : (fallbacks[stableHash(userText) % fallbacks.length] ?? fallbacks[0]);
-  return JSON.parse(JSON.stringify(picked)) as LLMResponse;
+  return rule?.reply ?? fallbacks[userText.length % fallbacks.length]!;
 }
 
-/** 输入里带这几个字时，假后端会故意返回一次错误，用来查看出错界面 */
+/** 用户的话里带这几个字时，Mock 模型故意失败，用来查看出错提示与重试 */
 export const MOCK_ERROR_TRIGGER = /(模拟错误|模擬錯誤)/;

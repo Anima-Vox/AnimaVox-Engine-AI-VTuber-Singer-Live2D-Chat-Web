@@ -1,7 +1,2 @@
-export * from './constants';
-export * from './schemas/llm';
-export * from './schemas/character';
-export * from './schemas/modelConfig';
-export * from './schemas/conversation';
+// 前后端共用的只有一样东西：接口约定（资料格式）
 export * from './schemas/api';
-export * from './mock/mockReplies';

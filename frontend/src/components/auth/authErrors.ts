@@ -1,22 +1,21 @@
 import type { Messages } from '../../i18n/messages/zh-CN';
-import { ChatTransportError } from '../../services/chat';
+import type { RequestError } from '../../services/api/errors';
 
-type AuthFieldKey = 'email' | 'password' | 'username' | 'code';
+/** 表单里有专属提示的栏位 */
+const FIELDS = ['email', 'password', 'username', 'code'] as const;
 
-/** 把登录、注册的失败转成界面文字（表单错误优先显示细分原因与栏位） */
+/** 把登录、注册、帐号操作的失败转成界面上的文字 */
 export function authErrorText(error: unknown, t: Messages): string {
-  if (!(error instanceof ChatTransportError)) {
-    return t.notice.reasons.unknown;
+  const { code, reason, field } = error as RequestError;
+  // 某个栏位填得不对：显示那个栏位的提示
+  const fieldKey = FIELDS.find((item) => item === field);
+  if (reason === 'INVALID_INPUT' && fieldKey) {
+    return t.auth.errors[fieldKey];
   }
-  if (error.reason && error.reason !== 'INVALID_INPUT') {
-    return t.auth.errors[error.reason];
+  // 后端给了细分原因（例如邮箱已注册、验证码不对）：显示对应的提示
+  if (reason) {
+    return t.auth.errors[reason];
   }
-  if (error.reason === 'INVALID_INPUT') {
-    const field = error.field as AuthFieldKey | undefined;
-    return field && field in t.auth.errors ? t.auth.errors[field] : t.auth.errors.INVALID_INPUT;
-  }
-  if (error.code === 'http') {
-    return t.notice.server(error.status, error.detail);
-  }
-  return t.notice.reasons[error.code];
+  // 其他：和对话区一样按错误分类显示
+  return t.notice.reasons[code];
 }

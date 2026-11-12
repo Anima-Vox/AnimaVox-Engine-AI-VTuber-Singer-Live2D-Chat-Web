@@ -1,6 +1,6 @@
 import type { ApiErrorBody, ApiErrorCode, ApiErrorReason } from '@shared';
 
-/** 每种错误码对应的 HTTP 状态与能否直接重试（接口约定 v1） */
+/** 每种错误码对应的 HTTP 状态，以及用户能不能直接重试（接口约定 v1 第二节） */
 const DEFAULTS: Record<ApiErrorCode, { status: number; retryable: boolean }> = {
   API_ERROR: { status: 400, retryable: false },
   MODEL_UNAVAILABLE: { status: 502, retryable: true },
@@ -10,13 +10,14 @@ const DEFAULTS: Record<ApiErrorCode, { status: number; retryable: boolean }> = {
 };
 
 interface ApiErrorOptions {
+  /** 不填就用上面的默认值 */
   status?: number;
   retryable?: boolean;
   reason?: ApiErrorReason;
   field?: string;
 }
 
-/** 路由里丢出这个，错误处理器就会按约定格式回给前端 */
+/** 路由里丢出这个，app.ts 的错误处理器就会按约定格式回给前端 */
 export class ApiError extends Error {
   readonly code: ApiErrorCode;
   readonly status: number;
@@ -26,7 +27,6 @@ export class ApiError extends Error {
 
   constructor(code: ApiErrorCode, message: string, options: ApiErrorOptions = {}) {
     super(message);
-    this.name = 'ApiError';
     this.code = code;
     this.status = options.status ?? DEFAULTS[code].status;
     this.retryable = options.retryable ?? DEFAULTS[code].retryable;
@@ -34,6 +34,7 @@ export class ApiError extends Error {
     this.field = options.field;
   }
 
+  /** 回给前端的内容 */
   toBody(): ApiErrorBody {
     return {
       code: this.code,
@@ -45,6 +46,9 @@ export class ApiError extends Error {
   }
 }
 
+/* ---------- 常用的几种错误 ---------- */
+
+/** 请求格式不对；field 指出是哪一个栏位 */
 export const invalidInput = (message: string, field?: string) =>
   new ApiError('API_ERROR', message, { reason: 'INVALID_INPUT', ...(field ? { field } : {}) });
 
@@ -53,24 +57,19 @@ export const notFound = (message: string) =>
 
 export const unauthorized = () => new ApiError('UNAUTHORIZED', '未登录或登录已过期');
 
-/** 把任何丢出来的东西转成约定的错误 */
+/** 把任何丢出来的错误转成约定的五种之一 */
 export function toApiError(error: unknown): ApiError {
   if (error instanceof ApiError) {
     return error;
   }
-  if (error instanceof Error) {
-    const statusCode = 'statusCode' in error ? Number(error.statusCode) : NaN;
-    // Fastify 自己的请求错误（例如 JSON 格式不对、内容太大）
-    if (statusCode >= 400 && statusCode < 500) {
-      return new ApiError('API_ERROR', error.message, {
-        status: statusCode,
-        reason: 'INVALID_INPUT',
-      });
-    }
-    // SQLite 正在忙（例如同时写入）：当成服务不稳，可以重试
-    if (/database is locked|SQLITE_BUSY/i.test(error.message)) {
-      return new ApiError('SERVICE_UNSTABLE', '数据库忙碌，请稍后再试');
-    }
+  // Fastify 自己挡下的请求（例如 JSON 写错、内容太大）会带 4xx 的 statusCode
+  const status = error instanceof Error && 'statusCode' in error ? Number(error.statusCode) : 500;
+  if (status >= 400 && status < 500) {
+    return new ApiError('API_ERROR', (error as Error).message, {
+      status,
+      reason: 'INVALID_INPUT',
+    });
   }
+  // 其余都是后端自己的问题
   return new ApiError('API_ERROR', '后端内部错误', { status: 500 });
 }

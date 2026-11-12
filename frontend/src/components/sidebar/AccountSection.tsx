@@ -7,7 +7,7 @@ import { authErrorText } from '../auth/authErrors';
 const SMALL_BUTTON =
   'rounded-full border border-mist-deep px-3.5 py-1.5 text-[0.8rem] text-ink transition-colors hover:bg-mist disabled:opacity-40';
 
-/** 设置里的帐号区块（只在接后端时出现）：用户名、训练授权、登出、删除帐号 */
+/** 设置里的帐号区块：改用户名、训练授权（可撤回）、登出、删除帐号 */
 export function AccountSection() {
   const t = useT();
   const user = useAuthStore((state) => state.user);
@@ -17,8 +17,11 @@ export function AccountSection() {
   const deleteAccount = useAuthStore((state) => state.deleteAccount);
 
   const [username, setUsername] = useState(user?.username ?? '');
+  /** 用户名刚保存成功（按钮显示「已保存」） */
   const [saved, setSaved] = useState(false);
+  /** 正在等用户再确认一次的操作：撤回训练同意，或删除帐号 */
   const [confirming, setConfirming] = useState<'withdraw' | 'delete' | null>(null);
+  /** 删除帐号时输入的密码 */
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,6 +31,7 @@ export function AccountSection() {
   }
   const a = t.account;
 
+  /** 执行一个帐号操作：期间按钮不能再按，失败时显示原因；回传有没有成功 */
   async function run(action: () => Promise<void>) {
     setBusy(true);
     setError(null);
@@ -62,6 +66,8 @@ export function AccountSection() {
   return (
     <section aria-label={a.title} className="mt-6 border-t border-mist-deep px-4 pt-5">
       <h3 className="mb-3 text-[0.95rem] font-medium text-ink">{a.title}</h3>
+
+      {/* 用户名（可改）、邮箱、训练授权（同意的人可以撤回） */}
       <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-3 text-[0.9rem]">
         <dt className="text-haze">{a.username}</dt>
         <dd>
@@ -98,6 +104,7 @@ export function AccountSection() {
         </dd>
       </dl>
 
+      {/* 撤回训练同意前再确认一次：撤回后不能再开启 */}
       {confirming === 'withdraw' && (
         <div
           role="alertdialog"
@@ -121,6 +128,7 @@ export function AccountSection() {
         </div>
       )}
 
+      {/* 删除帐号前要再输入一次密码 */}
       {confirming === 'delete' && (
         <form
           aria-label={a.deleteAccount}
@@ -161,6 +169,7 @@ export function AccountSection() {
         </p>
       )}
 
+      {/* 登出、删除帐号 */}
       <div className="mt-5 flex gap-2">
         <button
           type="button"

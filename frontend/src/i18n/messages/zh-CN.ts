@@ -47,24 +47,19 @@ export const zhCN = {
     locked: (character: Names) =>
       `${character.name}固定使用官方模型与 API，不需要也不能填写自己的 Key。`,
     customSoon: '自定义 API 设置即将开放。',
-    channel: '对话通道',
-    channels: { mock: '演示（浏览器内假后端）', http: '自家后端' },
-    backendUrl: '后端地址',
     customNote: '使用者自己创建的角色可以接入自己的模型与 API（开源引擎功能，即将开放）。',
   },
   settings: {
     title: '设置',
     language: '界面语言',
     history: '聊天记录',
-    historyValue: '只保存在这个浏览器里',
-    historyServer: '保存在服务器，换设备也看得到',
+    historyValue: '保存在服务器，换设备也看得到',
     engine: '引擎',
     engineValue: 'AnimaVox 心音',
     version: '版本',
     versionValue: '文字对话版 0.2',
   },
   chat: {
-    demoBadge: '演示模式：回复来自假后端',
     you: '你说',
     says: (character: Names) => `${character.shortName}说`,
     typing: (character: Names) => `${character.shortName}正在输入`,
@@ -79,23 +74,18 @@ export const zhCN = {
     failed: (reason: string) => `没有收到回复。${reason}`,
     retry: '重试',
     close: '关闭',
-    server: (status?: number, detail?: string) =>
-      `服务器返回错误${status ? `（${status}）` : ''}${detail ? `：${detail}` : '。'}`,
     reasons: {
       unanswered: '这条消息还没有收到回复。',
-      history: '读取本地聊天记录失败，新的消息仍可以正常发送。',
       aborted: '已停止等待回复。',
       timeout: '等了太久没有回应，请稍后再试。',
       network: '连不上服务器，请检查网络或确认后端已经启动。',
       invalid_response: '服务器返回的数据格式不对，请联系后端检查。',
-      unknown: '出了点意外，请再试一次。',
-      save: '这句话没能保存到浏览器，所以没有发出去，请再发一次。',
       api_error: '请求没有成功，请再试一次。',
       model_unavailable: '模型暂时连不上，请稍后再试。',
       service_unstable: '服务器或网络不稳定，请稍后再试。',
       quota_exceeded: '今天的对话额度已经用完，明天再来吧。',
       unauthorized: '登录已过期，请重新登录。',
-    } satisfies Record<Exclude<NoticeReason, 'http'>, string>,
+    } satisfies Record<NoticeReason, string>,
   },
   auth: {
     title: '欢迎来到 AnimaVox',
@@ -164,7 +154,6 @@ export const zhCN = {
     deleteAccount: '删除帐号',
     deletePrompt: '删除后帐号与全部对话记录都会删除，无法恢复。请输入密码确认：',
     confirmDelete: '确定删除',
-    error: '操作没有成功，请再试一次。',
   },
 };
 

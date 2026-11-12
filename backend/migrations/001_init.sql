@@ -45,7 +45,7 @@ CREATE TABLE messages (
   conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
   role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
   content TEXT NOT NULL,
-  -- assistant：模型回的完整结构化 JSON（emotion / action / expression / text / tool_calls）
+  -- assistant：模型回的完整 JSON（emotion / action / expression / text）
   response_json TEXT,
   -- assistant：这条回复对应的用户消息 id；同一句话只会有一条回复
   reply_to TEXT,

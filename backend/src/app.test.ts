@@ -1,42 +1,43 @@
-import { NOTICE_VERSION, type LLMResponse } from '@shared';
+import { NOTICE_VERSION } from '@shared';
 import type { FastifyInstance } from 'fastify';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildApp } from './app';
-import type { Mailer } from './auth/mailer';
-import { readEnv } from './config/env';
-import type { AppDeps } from './context';
+import { EnvSchema } from './config/env';
 import { openDatabase, type Database } from './db/database';
 import { ApiError } from './errors';
 import { createMockAdapter } from './services/llm/mockAdapter';
-import type { LlmAdapter } from './services/llm/types';
+import type { LlmAdapter, ModelReply } from './services/llm/types';
+
+/**
+ * 后端接口测试：用内存数据库建立整个应用，直接对它发请求（不占端口）。
+ * 每个用例都从空的数据库开始。
+ */
 
 let db: Database;
 let app: FastifyInstance;
+/** 「寄出」的验证码：邮箱 → 验证码 */
 let sentCodes: Map<string, string>;
+/** 目前使用的模型；个别用例会换成会失败的版本 */
 let llm: LlmAdapter;
-let clock: Date;
 
 async function start(overrides: Record<string, string> = {}) {
   db = openDatabase(':memory:');
   sentCodes = new Map();
-  const mailer: Mailer = {
-    isDevelopment: false,
-    async sendRegisterCode(email, code) {
-      sentCodes.set(email, code);
-    },
-  };
-  const deps: AppDeps = {
+  app = await buildApp({
     db,
-    env: readEnv({ NODE_ENV: 'test', DAILY_MESSAGE_LIMIT: '3', ...overrides }),
-    mailer,
-    llm: { mode: 'mock', reply: (input, signal) => llm.reply(input, signal) },
-    now: () => clock,
-  };
-  app = await buildApp(deps, { logger: false });
+    env: EnvSchema.parse({ NODE_ENV: 'test', DAILY_MESSAGE_LIMIT: '3', ...overrides }),
+    mailer: {
+      async sendRegisterCode(email, code) {
+        sentCodes.set(email, code);
+      },
+    },
+    llm: { reply: (input, signal) => llm.reply(input, signal) },
+  });
 }
 
 beforeEach(async () => {
-  clock = new Date('2026-11-13T10:00:00.000Z');
+  // 只固定「现在几点」，方便测试过期与隔天；计时器照常运作
+  vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-11-13T10:00:00.000Z') });
   llm = createMockAdapter();
   await start();
 });
@@ -44,7 +45,15 @@ beforeEach(async () => {
 afterEach(async () => {
   await app.close();
   db.close();
+  vi.useRealTimers();
 });
+
+/** 把时间往后拨 */
+function advance(ms: number) {
+  vi.setSystemTime(Date.now() + ms);
+}
+
+/* ---------- 测试里重复用到的动作 ---------- */
 
 async function register(email = 'nuo@example.com', username = '小柯', trainingConsent = true) {
   const sent = await app.inject({
@@ -93,15 +102,31 @@ function send(token: string, conversationId: string, clientMessageId: string, co
   });
 }
 
+/** 把模型换成「等到 release() 才回复」的版本，用来测试等待期间发生的事 */
+function gatedModel() {
+  const inner = createMockAdapter();
+  const waiters: (() => void)[] = [];
+  llm = {
+    async reply(input, signal) {
+      await new Promise<void>((resolve) => waiters.push(resolve));
+      return inner.reply(input, signal);
+    },
+  };
+  return {
+    waiting: () => waiters.length,
+    release: () => waiters.forEach((resolve) => resolve()),
+  };
+}
+
 function count(sql: string, ...params: string[]): number {
   return Number((db.prepare(sql).get(...params) as { n: number }).n);
 }
 
 describe('健康检查与错误格式', () => {
-  it('GET /api/health 回传状态与模型模式', async () => {
+  it('GET /api/health 回传 ok', async () => {
     const response = await app.inject({ method: 'GET', url: '/api/health' });
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toMatchObject({ status: 'ok', llmMode: 'mock' });
+    expect(response.json()).toEqual({ status: 'ok' });
   });
 
   it('没登录时回 401 与 UNAUTHORIZED', async () => {
@@ -188,6 +213,28 @@ describe('注册与登录', () => {
     expect(taken.json()).toMatchObject({ reason: 'EMAIL_TAKEN' });
   });
 
+  it('还没接寄信服务时把验证码随接口回传（devCode）；正式环境不回传', async () => {
+    const dev = await app.inject({
+      method: 'POST',
+      url: '/api/auth/email-code',
+      payload: { email: 'dev@example.com' },
+    });
+    expect(dev.json()).toEqual({
+      resendAfterSeconds: 60,
+      devCode: sentCodes.get('dev@example.com'),
+    });
+
+    await app.close();
+    db.close();
+    await start({ NODE_ENV: 'production' });
+    const production = await app.inject({
+      method: 'POST',
+      url: '/api/auth/email-code',
+      payload: { email: 'dev@example.com' },
+    });
+    expect(production.json()).toEqual({ resendAfterSeconds: 60 });
+  });
+
   it('密码正确才能登录；登出后 token 失效', async () => {
     await register();
     const bad = await app.inject({
@@ -210,7 +257,7 @@ describe('注册与登录', () => {
 
   it('登录超过有效天数后要重新登录', async () => {
     const { token } = await register();
-    clock = new Date(clock.getTime() + 31 * 86_400_000);
+    advance(31 * 86_400_000);
     const me = await app.inject({ method: 'GET', url: '/api/me', headers: auth(token) });
     expect(me.statusCode).toBe(401);
   });
@@ -259,11 +306,48 @@ describe('对话与回复', () => {
     expect(count('SELECT message_count AS n FROM usage_daily')).toBe(1);
   });
 
+  it('同一句话同时送了两次：只留一条回复、只计一次用量', async () => {
+    const { token } = await register();
+    const conversation = await newConversation(token);
+    // 两个请求都卡在「等模型」这一步，再一起放行
+    const gate = gatedModel();
+    const both = Promise.all([
+      send(token, conversation.id, 'client-msg-0015', '你好'),
+      send(token, conversation.id, 'client-msg-0015', '你好'),
+    ]);
+    await vi.waitFor(() => expect(gate.waiting()).toBe(2));
+    gate.release();
+
+    const [first, second] = await both;
+    expect(first.statusCode).toBe(200);
+    expect(second.json().reply.id).toBe(first.json().reply.id);
+    expect(count('SELECT COUNT(*) AS n FROM messages')).toBe(2);
+    expect(count('SELECT message_count AS n FROM usage_daily')).toBe(1);
+  });
+
+  it('等模型回复时对话被删除：回 NOT_FOUND，不留下任何消息', async () => {
+    const { token } = await register();
+    const conversation = await newConversation(token);
+    const gate = gatedModel();
+    const pending = send(token, conversation.id, 'client-msg-0016', '你好');
+    await vi.waitFor(() => expect(gate.waiting()).toBe(1));
+    await app.inject({
+      method: 'DELETE',
+      url: `/api/conversations/${conversation.id}`,
+      headers: auth(token),
+    });
+    gate.release();
+
+    const response = await pending;
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toMatchObject({ code: 'API_ERROR', reason: 'NOT_FOUND' });
+    expect(count('SELECT COUNT(*) AS n FROM messages')).toBe(0);
+  });
+
   it('模型失败时回 MODEL_UNAVAILABLE 并保留用户消息；用同一个 id 重试会补上回复', async () => {
     const { token } = await register();
     const conversation = await newConversation(token);
     llm = {
-      mode: 'mock',
       async reply() {
         throw new ApiError('MODEL_UNAVAILABLE', '测试');
       },
@@ -283,7 +367,6 @@ describe('对话与回复', () => {
     const { token } = await register();
     const conversation = await newConversation(token);
     llm = {
-      mode: 'mock',
       async reply() {
         throw new Error('connection refused');
       },
@@ -298,9 +381,8 @@ describe('对话与回复', () => {
     const second = await register();
     const conversation2 = await newConversation(second.token);
     llm = {
-      mode: 'mock',
       reply: (_input, signal) =>
-        new Promise<LLMResponse>((_resolve, reject) => {
+        new Promise<ModelReply>((_resolve, reject) => {
           signal.addEventListener('abort', () => reject(new Error('aborted')));
         }),
     };
@@ -321,7 +403,7 @@ describe('对话与回复', () => {
     expect(over.statusCode).toBe(429);
     expect(over.json()).toMatchObject({ code: 'QUOTA_EXCEEDED', retryable: false });
 
-    clock = new Date(clock.getTime() + 86_400_000);
+    advance(86_400_000);
     expect((await send(token, conversation.id, 'client-msg-q005', '你好')).statusCode).toBe(200);
   });
 
@@ -392,6 +474,16 @@ describe('帐号设定与训练同意', () => {
 
     await send(token, conversation.id, 'client-msg-0011', '还在吗');
     expect(count('SELECT COUNT(*) AS n FROM messages WHERE training_allowed = 1')).toBe(0);
+  });
+
+  it('本来就不同意的用户不需要撤回：调用撤回不会留下撤回记录', async () => {
+    const { token } = await register('no@example.com', '小柯', false);
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/me/consent/withdraw',
+      headers: auth(token),
+    });
+    expect(response.json()).toMatchObject({ trainingConsent: false, consentWithdrawnAt: null });
   });
 
   it('不同意训练的用户照样可以正常对话', async () => {

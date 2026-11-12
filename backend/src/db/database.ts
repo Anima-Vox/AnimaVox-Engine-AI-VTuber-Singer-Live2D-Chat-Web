@@ -1,54 +1,48 @@
 import { mkdirSync, readdirSync, readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import path from 'node:path';
-import type { DatabaseSync as DatabaseSyncType } from 'node:sqlite';
+import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
 
-// 用 require 载入 node:sqlite：部分打包与测试工具（例如 Vitest 2 用的 Vite 5）还不认得这个内置模块
-const { DatabaseSync } = createRequire(import.meta.url)(
-  'node:sqlite',
-) as typeof import('node:sqlite');
+/**
+ * 数据库：使用 Node 内建的 SQLite（node:sqlite，需要 Node.js 22.13 以上），不用另外安装。
+ * 所有资料都在一个文件里（默认 backend/data/animavox.db）。
+ */
+export type Database = DatabaseSync;
 
-/** 迁移文件放在 backend/migrations/，按文件名顺序执行，每个只执行一次 */
+/** 表结构放在 backend/migrations/ 的 .sql 文件里 */
 const MIGRATIONS_DIR = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '../../migrations',
 );
 
-export type Database = DatabaseSyncType;
-
-/**
- * 打开 SQLite 数据库并套用还没执行过的迁移。
- * 使用 Node 内置的 node:sqlite（需要 Node.js 22.13 以上），不需要另外安装套件。
- */
+/** 打开数据库，并套用还没执行过的表结构变更。filePath 传 ':memory:' 时只存在内存里（测试用） */
 export function openDatabase(filePath: string): Database {
   if (filePath !== ':memory:') {
     mkdirSync(path.dirname(path.resolve(filePath)), { recursive: true });
   }
   const db = new DatabaseSync(filePath);
+  // 开启外键：删除用户或对话时，底下的资料会跟着删除（ON DELETE CASCADE）
   db.exec('PRAGMA foreign_keys = ON;');
-  if (filePath !== ':memory:') {
-    db.exec('PRAGMA journal_mode = WAL;');
-  }
   runMigrations(db);
   return db;
 }
 
-export function runMigrations(db: Database, dir: string = MIGRATIONS_DIR): string[] {
+/**
+ * 表结构变更（迁移）：按文件名顺序执行 migrations/ 里的 .sql，每个文件只执行一次。
+ * 执行过的文件名记在 schema_migrations 表里，所以更新代码后重启后端，数据库就会自动升级。
+ */
+function runMigrations(db: Database): void {
   db.exec(
     'CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, applied_at TEXT NOT NULL);',
   );
-  const applied = new Set(
-    (db.prepare('SELECT name FROM schema_migrations').all() as { name: string }[]).map(
-      (row) => row.name,
-    ),
-  );
-  const pending = readdirSync(dir)
-    .filter((name) => name.endsWith('.sql') && !applied.has(name))
+  const applied = db.prepare('SELECT name FROM schema_migrations').all() as { name: string }[];
+  const appliedNames = new Set(applied.map((row) => row.name));
+  const pending = readdirSync(MIGRATIONS_DIR)
+    .filter((name) => name.endsWith('.sql') && !appliedNames.has(name))
     .sort();
 
   for (const name of pending) {
-    const sql = readFileSync(path.join(dir, name), 'utf8');
+    const sql = readFileSync(path.join(MIGRATIONS_DIR, name), 'utf8');
     transaction(db, () => {
       db.exec(sql);
       db.prepare('INSERT INTO schema_migrations (name, applied_at) VALUES (?, ?)').run(
@@ -57,16 +51,14 @@ export function runMigrations(db: Database, dir: string = MIGRATIONS_DIR): strin
       );
     });
   }
-  return pending;
 }
 
-/** 在一个事务里执行；出错时整批撤销 */
-export function transaction<T>(db: Database, work: () => T): T {
+/** 把几个写入包成一个事务：全部成功才生效，中途出错就整批撤销 */
+export function transaction(db: Database, work: () => void): void {
   db.exec('BEGIN');
   try {
-    const result = work();
+    work();
     db.exec('COMMIT');
-    return result;
   } catch (error) {
     db.exec('ROLLBACK');
     throw error;

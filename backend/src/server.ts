@@ -5,32 +5,20 @@ import { openDatabase } from './db/database';
 import { createMockAdapter } from './services/llm/mockAdapter';
 import { logger } from './utils/logger';
 
-const db = openDatabase(env.DATABASE_PATH);
+/**
+ * 后端的入口（npm run dev 执行的就是这个文件）：
+ * 打开数据库 → 准备寄信与模型 → 建立应用 → 开始监听。
+ */
 const app = await buildApp(
   {
-    db,
+    db: openDatabase(env.DATABASE_PATH),
     env,
     // 还没接寄信服务：验证码印在日志里
     mailer: createConsoleMailer(logger),
-    // LLM_MODE=live 尚未实现，一律使用 Mock 模型
+    // 还没接真实模型：使用演示台词
     llm: createMockAdapter(),
   },
   { loggerInstance: logger },
 );
 
-for (const signal of ['SIGINT', 'SIGTERM'] as const) {
-  process.on(signal, () => {
-    void app.close().then(() => {
-      db.close();
-      logger.info(`收到 ${signal}，后端已关闭`);
-      process.exit(0);
-    });
-  });
-}
-
-try {
-  await app.listen({ port: env.PORT, host: env.HOST });
-} catch (error) {
-  logger.error(error, '后端启动失败');
-  process.exit(1);
-}
+await app.listen({ port: env.PORT, host: env.HOST });

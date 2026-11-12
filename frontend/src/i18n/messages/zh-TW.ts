@@ -10,6 +10,9 @@ export const zhTW: Messages = {
     api: { label: 'API', title: '模型與 API' },
     settings: { label: '設置', title: '設置' },
   },
+  overlay: {
+    close: '關閉',
+  },
   conversations: {
     title: (character) => `和${character.shortName}的對話`,
     new: '新對話',

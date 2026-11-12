@@ -55,7 +55,7 @@ export function Composer({ placeholder, isWaiting, disabled, onSend, onStop }: C
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto w-full max-w-[50rem] px-6 pb-6 pt-2">
+    <form onSubmit={handleSubmit} className="w-full px-6 pb-6 pt-2">
       <div className="flex items-end gap-3 rounded-[1.4rem] border border-mist-deep bg-white py-2.5 pl-5 pr-2.5 transition-shadow focus-within:border-signal/50 focus-within:ring-4 focus-within:ring-signal/10">
         <textarea
           ref={textareaRef}

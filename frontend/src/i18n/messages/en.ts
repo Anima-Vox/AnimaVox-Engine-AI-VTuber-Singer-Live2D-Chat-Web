@@ -10,6 +10,9 @@ export const en: Messages = {
     api: { label: 'API', title: 'Model & API' },
     settings: { label: 'Settings', title: 'Settings' },
   },
+  overlay: {
+    close: 'Close',
+  },
   conversations: {
     title: (character) => `Chats with ${character.englishName}`,
     new: 'New chat',

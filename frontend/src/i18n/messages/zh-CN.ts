@@ -13,6 +13,9 @@ export const zhCN = {
     api: { label: 'API', title: '模型与 API' },
     settings: { label: '设置', title: '设置' },
   },
+  overlay: {
+    close: '关闭',
+  },
   conversations: {
     title: (character: Names) => `和${character.shortName}的对话`,
     new: '新对话',

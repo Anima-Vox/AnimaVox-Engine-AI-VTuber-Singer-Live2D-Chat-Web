@@ -1,10 +1,10 @@
 import clsx from 'clsx';
-import type { ComponentType, SVGProps } from 'react';
+import { forwardRef, type ComponentType, type SVGProps } from 'react';
 import logoUrl from '../../assets/brand/animavox-vertical-on-dark.svg';
 import { useT } from '../../i18n';
 import { CharacterIcon, ChatIcon, GearIcon, KeyIcon, PersonaIcon } from '../common/icons';
 
-/** 侧边列表可以显示的面板 */
+/** 工具栏可以打开的二级页面 */
 export type PanelId = 'conversations' | 'characters' | 'persona' | 'api' | 'settings';
 
 /** 菜单项的文字（label，以及鼠标悬停时的完整说明 title）在 i18n 的 nav 里 */
@@ -23,7 +23,8 @@ const MAIN_ITEMS: readonly NavItem[] = [
 const SETTINGS_ITEM: NavItem = { id: 'settings', Icon: GearIcon };
 
 interface NavRailProps {
-  active: PanelId;
+  /** 当前打开的二级页面；没有打开时为 null */
+  active: PanelId | null;
   onSelect: (panel: PanelId) => void;
 }
 
@@ -42,6 +43,9 @@ function NavButton({
     <button
       type="button"
       title={text.title}
+      data-panel={item.id}
+      aria-haspopup="dialog"
+      aria-expanded={isActive}
       aria-current={isActive ? 'page' : undefined}
       onClick={() => onSelect(item.id)}
       className={clsx(
@@ -63,13 +67,17 @@ function NavButton({
   );
 }
 
-/** 最左侧的菜单栏：AnimaVox 引擎的所有功能入口 */
-export function NavRail({ active, onSelect }: NavRailProps) {
+/** 最左侧的工具栏：AnimaVox 引擎的所有功能入口，每一项打开一个二级页面；显示在二级页面的模糊层之上 */
+export const NavRail = forwardRef<HTMLElement, NavRailProps>(function NavRail(
+  { active, onSelect },
+  ref,
+) {
   const t = useT();
   return (
     <nav
+      ref={ref}
       aria-label={t.nav.menu}
-      className="flex w-[4.6rem] shrink-0 flex-col items-center gap-2 bg-night py-5"
+      className="relative z-50 flex w-[var(--nav-width)] shrink-0 flex-col items-center gap-2 bg-night py-5"
     >
       <img
         src={logoUrl}
@@ -92,4 +100,4 @@ export function NavRail({ active, onSelect }: NavRailProps) {
       </div>
     </nav>
   );
-}
+});

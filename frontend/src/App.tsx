@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChatHeader } from './components/chat/ChatHeader';
 import { Composer } from './components/chat/Composer';
 import { MessageList } from './components/chat/MessageList';
 import { Live2DSlot } from './components/live2d/Live2DSlot';
 import { NavRail, type PanelId } from './components/nav/NavRail';
+import { OverlayPage } from './components/overlay/OverlayPage';
 import { ApiPanel } from './components/sidebar/ApiPanel';
 import { CharactersPanel } from './components/sidebar/CharactersPanel';
 import { ConversationsPanel } from './components/sidebar/ConversationsPanel';
@@ -17,12 +18,15 @@ import { useChatStore } from './stores/chatStore';
 import { useLocaleStore } from './stores/localeStore';
 
 /**
- * 主界面（以 2560 × 1440 为基准）：
- * 左 1/4 = 菜单栏 + 侧边列表；右 3/4 = 对话，对话区中间、消息后面是 Live2D 预留位置（透明、无框）。
- * 宽度不足 800px 时隐藏侧边列表。
+ * 主界面：主页只有中间的对话栏（宽 60vw、水平置中、上下占满；窄于 800px 时全宽）。
+ * - 对话栏中间、消息后面一层是 Live2D 预留位置（透明、无框）。
+ * - 左边工具栏的每一项都打开盖在主页上的二级页面（见 OverlayPage），主页在后面模糊柔焦。
  */
 export function App() {
-  const [panel, setPanel] = useState<PanelId>('conversations');
+  /** 当前打开的二级页面；null = 只显示主页 */
+  const [panel, setPanel] = useState<PanelId | null>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
 
   const activeCharacterId = useCharacterStore((state) => state.activeCharacterId);
   const isRestored = useCharacterStore((state) => state.isRestored);
@@ -36,6 +40,7 @@ export function App() {
   const chat = useChatStore();
   const { openCharacter } = chat;
   const character = getCharacter(activeCharacterId);
+  const isOverlayOpen = panel !== null;
 
   useEffect(() => {
     void restoreCharacter();
@@ -54,11 +59,25 @@ export function App() {
     }
   }, [isRestored, activeCharacterId, openCharacter]);
 
+  // 二级页面开着时，模糊层下的主页点不到、Tab 也走不进去，读屏软件也跳过
+  useEffect(() => {
+    mainRef.current?.toggleAttribute('inert', isOverlayOpen);
+  }, [isOverlayOpen]);
+
   const isWaiting = chat.status === 'waiting';
   const isLoading = chat.status === 'loading';
   const activeTitle =
     chat.conversations.find((conversation) => conversation.id === chat.conversationId)?.title ??
     null;
+
+  /** 关闭二级页面，焦点回到打开它的工具栏按钮 */
+  function closeOverlay() {
+    const opener = panel
+      ? navRef.current?.querySelector<HTMLElement>(`[data-panel="${panel}"]`)
+      : null;
+    setPanel(null);
+    opener?.focus();
+  }
 
   function handleSelectCharacter(characterId: string) {
     void switchCharacter(characterId);
@@ -66,34 +85,13 @@ export function App() {
   }
 
   return (
-    <div className="grid h-full grid-cols-[minmax(0,1fr)_minmax(0,3fr)] max-[800px]:grid-cols-[auto_minmax(0,1fr)]">
-      <div className="flex min-h-0">
-        <NavRail active={panel} onSelect={setPanel} />
-        <div className="flex min-h-0 min-w-0 flex-1 border-r border-mist-deep max-[800px]:hidden">
-          {panel === 'conversations' && (
-            <ConversationsPanel
-              character={character}
-              conversations={chat.conversations}
-              activeId={chat.conversationId}
-              onNew={chat.startNewConversation}
-              onSelect={(id) => void chat.selectConversation(id)}
-              onDelete={(id) => void chat.deleteConversation(id)}
-            />
-          )}
-          {panel === 'characters' && (
-            <CharactersPanel
-              characters={OFFICIAL_CHARACTERS}
-              activeId={character.id}
-              onSelect={handleSelectCharacter}
-            />
-          )}
-          {panel === 'persona' && <PersonaPanel character={character} />}
-          {panel === 'api' && <ApiPanel character={character} />}
-          {panel === 'settings' && <SettingsPanel />}
-        </div>
-      </div>
+    <div className="flex h-full">
+      <NavRail ref={navRef} active={panel} onSelect={setPanel} />
 
-      <main className="flex min-h-0 min-w-0 flex-col">
+      <main
+        ref={mainRef}
+        className="mx-auto flex h-full min-w-0 flex-1 flex-col min-[800px]:w-[60vw] min-[800px]:flex-none"
+      >
         <ChatHeader character={character} title={activeTitle} mode={chatTransport.mode} />
         {/* 消息区：Live2D 预留位置在后（z-0），消息在前（z-10） */}
         <div className="relative flex min-h-0 flex-1 flex-col">
@@ -120,6 +118,38 @@ export function App() {
           onStop={chat.stop}
         />
       </main>
+
+      {panel !== null && (
+        <OverlayPage pageKey={panel} onClose={closeOverlay} companionRef={navRef}>
+          {panel === 'conversations' && (
+            <ConversationsPanel
+              character={character}
+              conversations={chat.conversations}
+              activeId={chat.conversationId}
+              // 点选对话或新对话后回到聊天；删除对话不关闭
+              onNew={() => {
+                chat.startNewConversation();
+                closeOverlay();
+              }}
+              onSelect={(id) => {
+                void chat.selectConversation(id);
+                closeOverlay();
+              }}
+              onDelete={(id) => void chat.deleteConversation(id)}
+            />
+          )}
+          {panel === 'characters' && (
+            <CharactersPanel
+              characters={OFFICIAL_CHARACTERS}
+              activeId={character.id}
+              onSelect={handleSelectCharacter}
+            />
+          )}
+          {panel === 'persona' && <PersonaPanel character={character} />}
+          {panel === 'api' && <ApiPanel character={character} />}
+          {panel === 'settings' && <SettingsPanel />}
+        </OverlayPage>
+      )}
     </div>
   );
 }

@@ -12,6 +12,12 @@
     font-size: clamp(15px, calc(0.45vw + 7px), 20px);
   }
 
+  /* 左侧工具栏的尺寸（NavRail） */
+  :root {
+    /* 展开后的宽度 */
+    --nav-width: 4.6rem;
+  }
+
   html,
   body,
   #root {
@@ -45,6 +51,31 @@
 
 @layer components {
   /*
+   * 二级页面：窄屏（< 800px）接近全宽，左边让出展开的工具栏；
+   * 800px 以上与对话栏同宽（60vw），水平垂直置中。高度都是 75vh，内容在页面内部滚动。
+   */
+  .overlay-page {
+    top: 50%;
+    left: calc(var(--nav-width) + 0.75rem);
+    right: 0.75rem;
+    height: 75vh;
+    transform: translateY(-50%);
+  }
+
+  @media (min-width: 800px) {
+    .overlay-page {
+      left: 50%;
+      right: auto;
+      width: 60vw;
+      transform: translate(-50%, -50%);
+    }
+  }
+
+  .overlay-fade {
+    animation: overlay-fade-in 160ms ease-out;
+  }
+
+  /*
    * Live2D 预留位置（Live2DSlot）：外层 .live2d-layer 铺满消息区并作为尺寸容器，
    * 里面的 .live2d-slot 宽高比 1080 : 1170，高度取「消息区高度的 70%」与「对话栏宽度换算出的高度」中较小的，
    * 所以宽度永远不会超过对话栏。完全透明，没有任何外框。
@@ -61,6 +92,12 @@
   .thin-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: theme('colors.mist.deep') transparent;
+  }
+}
+
+@keyframes overlay-fade-in {
+  from {
+    opacity: 0;
   }
 }
 

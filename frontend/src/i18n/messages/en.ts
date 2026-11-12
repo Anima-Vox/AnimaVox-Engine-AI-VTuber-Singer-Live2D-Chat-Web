@@ -47,7 +47,6 @@ export const en: Messages = {
     customSoon: 'Custom API settings coming soon.',
     channel: 'Chat channel',
     channels: { mock: 'Demo (in-browser mock backend)', http: 'Own backend' },
-    backendUrl: 'Backend URL',
     customNote:
       'Characters you create yourself can connect their own model and API (open-source engine feature, coming soon).',
   },

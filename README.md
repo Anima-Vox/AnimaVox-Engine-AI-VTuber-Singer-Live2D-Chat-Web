@@ -20,6 +20,8 @@
 ---
 
 > **⚠️ 開發階段聲明**
+> **這是純淨版**：已移除 `backend/` 與 HTTP 接口，只保留前端與瀏覽器內的演示回覆。接上自己的接口請看 [純淨版說明](纯净版说明.md)。
+>
 > 本倉庫目前是**第三版前端（AnimaVox 文字對話版）與最小 Mock 後端**（見下方[快速開始](#-快速開始-quick-start)）。正式後端尚未開工；`backend/` 僅供前端開發與測試。第三版前端的說明見 [frontend/README.md](frontend/README.md)。
 > 真實 LLM、SQLite 儲存與金鑰加密、語音管線（GPT-SoVITS TTS / STT）、長期記憶與 Live2D 渲染均未實作。下列產品願景與路線圖不代表已完成功能。
 > 歡迎透過 Issue 參與討論，或見下方[招募段落](#-招募同伴我們正在尋找開發夥伴-we-are-hiring)。
@@ -175,32 +177,15 @@ npm run dev:frontend
 - **角色**：李佳尹、羽澄糯为官方角色，人设、模型、形象锁定不可修改；使用者自建角色（自带人设、API、Live2D）为开源引擎功能，即将开放。
 - **界面语言**：「设置」里切换简体中文 / 繁體中文 / English，只影响界面文字，角色台词与聊天内容不转换。
 
-### 接入真实后端
+### 接入自己的接口
 
-复制 `frontend/.env.example` 为 `frontend/.env.local`：
-
-| 变量 | 取值 | 说明 |
-| --- | --- | --- |
-| `VITE_CHAT_TRANSPORT` | `mock`（默认）/ `http` | `mock` = 浏览器内假后端；`http` = 自家后端 |
-| `VITE_API_URL` | 默认 `http://localhost:3001` | 后端地址，只在 `http` 模式使用 |
-
-然后 `npm run dev`（同时启动前端与后端）。前后端只通过 `packages/shared` 的 Zod 契约沟通：前端调用 `POST /api/chat`，**不发送 System Prompt、不持有任何 API Key**，人设与模型由后端决定。
-
-后端（进程环境变量）：
-
-| 变量 | 默认值 | 说明 |
-| --- | --- | --- |
-| `PORT` | `3001` | 监听端口 |
-| `HOST` | `0.0.0.0` | 监听地址 |
-| `NODE_ENV` | `development` | 决定日志格式 |
-| `LLM_MODE` | `mock` | 当前只有 `mock`；`live` 尚未实现，仍走 mock |
-| `CORS_ORIGIN` | `http://localhost:5173` | 允许的前端来源，多个用逗号分隔 |
+纯净版没有后端，也没有 HTTP 接口。接法见 [纯净版说明](纯净版说明.md)。
 
 ### 常用命令
 
 ```bash
 npm run dev:frontend # 只启动前端（假后端，5173）
-npm run dev          # 同时启动前端(5173) 与后端(3001)
+npm run dev          # 同 dev:frontend（纯净版没有后端）
 npm run build        # 构建前端，产物在 frontend/dist
 npm run typecheck    # 全项目 TS 严格模式检查
 npm run lint         # ESLint
@@ -225,7 +210,6 @@ Web chat/
 │       ├── services/chat/    # ChatTransport：假后端与真实后端
 │       ├── stores/           # Zustand：对话 / 当前角色 / 界面语言
 │       └── db/               # Dexie(IndexedDB) schema 与仓储
-├── backend/                  # Fastify（当前为 Mock 适配器）
 └── playwright.config.ts      # E2E 配置（三个分辨率）
 ```
 

@@ -1,22 +1,17 @@
 /**
- * 前端运行配置（全部来自 VITE_ 环境变量，均为非敏感信息）。
- * 前端不持有任何 API Key：真实模型只能由后端调用。
+ * 前端运行配置（纯净版：没有后端，也没有 HTTP 接口）。
+ * 前端不持有任何 API Key。
  */
 
-/** 对话请求走哪条通道：mock = 浏览器内假后端；http = 自家后端 /api/chat */
+/**
+ * 对话通道的种类：mock = 浏览器内的演示回复。
+ * 'http' 留给你接上自己的接口后使用（界面会因此隐藏「演示模式」标记）。
+ */
 export type ChatTransportMode = 'mock' | 'http';
 
-function readTransportMode(raw: string | undefined): ChatTransportMode {
-  return raw === 'http' ? 'http' : 'mock';
-}
-
 export const APP_CONFIG = {
-  /** 默认 mock：不启动后端也能体验完整对话流程 */
-  transportMode: readTransportMode(import.meta.env.VITE_CHAT_TRANSPORT),
-  /** 后端地址，仅 http 模式使用 */
-  apiBaseUrl: import.meta.env.VITE_API_URL ?? 'http://localhost:3001',
-  /** 单次请求最长等待时间（毫秒） */
-  requestTimeoutMs: 60_000,
+  /** 纯净版只有浏览器内的演示回复；接上自己的接口后，改用你的通道的 mode */
+  transportMode: 'mock' as ChatTransportMode,
   /**
    * 官方实例锁定自有模型，前端只传一个固定标识；
    * 具体用哪个模型由后端决定（对应 ChatRequest.modelConfigId）。

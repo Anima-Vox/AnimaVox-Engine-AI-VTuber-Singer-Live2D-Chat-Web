@@ -5,7 +5,7 @@ import type { CharacterProfile } from '../../config/characters';
 import { useT } from '../../i18n';
 import { formatSidebarTime } from '../../utils/time';
 import { PlusIcon, TrashIcon } from '../common/icons';
-import { SidePanel } from './SidePanel';
+import { OverlayPanel } from '../overlay/OverlayPage';
 
 interface ConversationsPanelProps {
   character: CharacterProfile;
@@ -91,7 +91,7 @@ export function ConversationsPanel({
 }: ConversationsPanelProps) {
   const t = useT().conversations;
   return (
-    <SidePanel
+    <OverlayPanel
       title={t.title(character)}
       action={
         <button
@@ -123,6 +123,6 @@ export function ConversationsPanel({
       {conversations.length === 0 && (
         <p className="px-3.5 pt-3 text-[0.85rem] leading-relaxed text-haze">{t.empty}</p>
       )}
-    </SidePanel>
+    </OverlayPanel>
   );
 }

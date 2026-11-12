@@ -48,7 +48,7 @@ export function MessageList({
 
   return (
     <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto">
-      <div className="mx-auto flex min-h-full w-full max-w-[50rem] flex-col px-6">
+      <div className="flex min-h-full w-full flex-col px-6">
         {isLoading ? null : isEmpty ? (
           <EmptyState character={character} onPick={onPick} disabled={isWaiting} />
         ) : (

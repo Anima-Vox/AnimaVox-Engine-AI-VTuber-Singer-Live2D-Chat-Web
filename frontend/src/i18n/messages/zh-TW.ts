@@ -10,6 +10,9 @@ export const zhTW: Messages = {
     api: { label: 'API', title: '模型與 API' },
     settings: { label: '設置', title: '設置' },
   },
+  overlay: {
+    close: '關閉',
+  },
   conversations: {
     title: (character) => `和${character.shortName}的對話`,
     new: '新對話',
@@ -83,11 +86,5 @@ export const zhTW: Messages = {
       unknown: '出了點意外，請再試一次。',
       save: '這句話沒能保存到瀏覽器，所以沒有發出去，請再發一次。',
     },
-  },
-  stage: {
-    label: (character) => `${character.name}的形象`,
-    online: '在線',
-    typing: '正在輸入…',
-    live2dPending: 'Live2D 準備中',
   },
 };

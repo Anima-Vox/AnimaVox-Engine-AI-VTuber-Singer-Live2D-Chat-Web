@@ -63,6 +63,15 @@ export function PlusIcon(props: IconProps) {
   );
 }
 
+/** 关闭：✕ */
+export function CloseIcon(props: IconProps) {
+  return (
+    <StrokeIcon strokeWidth={2} {...props}>
+      <path d="M6 6l12 12M18 6 6 18" />
+    </StrokeIcon>
+  );
+}
+
 /** 下拉选单的箭头 */
 export function ChevronDownIcon(props: IconProps) {
   return (

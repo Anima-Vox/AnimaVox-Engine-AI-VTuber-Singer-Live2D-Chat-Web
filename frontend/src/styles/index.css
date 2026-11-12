@@ -12,6 +12,18 @@
     font-size: clamp(15px, calc(0.45vw + 7px), 20px);
   }
 
+  /* 左侧工具栏的尺寸与动画（NavRail） */
+  :root {
+    /* 展开后的宽度 */
+    --nav-width: 4.6rem;
+    /* 收起时在屏幕最左边露出的窄条 */
+    --nav-peek: 0.5rem;
+    /* 鼠标感应范围：从屏幕左缘算起约 1 cm，窄条以外的部分透明 */
+    --nav-hotzone: 2.4rem;
+    --nav-duration: 280ms;
+    --nav-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
   html,
   body,
   #root {
@@ -45,48 +57,76 @@
 
 @layer components {
   /*
-   * 右侧拱形展示框（造型来自《李佳尹 角色资料介绍》第一页的立绘框）：
-   * 上方半圆、下方小圆角，白 → 蓝 → 深夜蓝的渐变，内圈一道虚线。
-   * 外层 .stage-slot 是尺寸容器，展示框按 2:5 的比例尽量撑满。
+   * 左侧工具栏：收起时整条往左移，只露出右缘 --nav-peek 宽的窄条（颜色就是工具栏本身的 night），
+   * 里面的图标淡出；展开时滑回来、图标淡入。只动 transform 与 opacity，动画才平滑。
    */
-  .stage-slot {
+  .nav-rail {
+    transform: translateX(calc(var(--nav-peek) - 100%));
+    transition: transform var(--nav-duration) var(--nav-ease);
+    will-change: transform;
+  }
+
+  .nav-rail[data-expanded='true'] {
+    transform: translateX(0);
+  }
+
+  .nav-rail-content {
+    opacity: 0;
+    transition: opacity var(--nav-duration) var(--nav-ease);
+  }
+
+  .nav-rail[data-expanded='true'] .nav-rail-content {
+    opacity: 1;
+  }
+
+  /*
+   * 二级页面：窄屏（< 800px）接近全宽，左边让出展开的工具栏；
+   * 800px 以上与对话栏同宽（60vw），水平垂直置中。高度都是 75vh，内容在页面内部滚动。
+   */
+  .overlay-page {
+    top: 50%;
+    left: calc(var(--nav-width) + 0.75rem);
+    right: 0.75rem;
+    height: 75vh;
+    transform: translateY(-50%);
+  }
+
+  @media (min-width: 800px) {
+    .overlay-page {
+      left: 50%;
+      right: auto;
+      width: 60vw;
+      transform: translate(-50%, -50%);
+    }
+  }
+
+  .overlay-fade {
+    animation: overlay-fade-in 160ms ease-out;
+  }
+
+  /*
+   * Live2D 预留位置（Live2DSlot）：外层 .live2d-layer 铺满消息区并作为尺寸容器，
+   * 里面的 .live2d-slot 宽高比 1080 : 1170，高度取「消息区高度的 70%」与「对话栏宽度换算出的高度」中较小的，
+   * 所以宽度永远不会超过对话栏。完全透明，没有任何外框。
+   */
+  .live2d-layer {
     container-type: size;
-    display: grid;
-    place-items: center;
   }
 
-  .stage-frame {
-    --frame-w: min(86cqw, calc(100cqh * 2 / 5));
-    --frame-inset: 0.9rem;
-    --frame-foot: 1.1rem;
-    position: relative;
-    overflow: hidden;
-    width: var(--frame-w);
-    aspect-ratio: 2 / 5;
-    border: 1px solid rgb(61 99 232 / 0.22);
-    border-radius: calc(var(--frame-w) / 2) calc(var(--frame-w) / 2) var(--frame-foot)
-      var(--frame-foot);
-    background:
-      radial-gradient(60% 32% at 50% 30%, rgb(255 255 255 / 0.6), transparent 70%),
-      linear-gradient(180deg, #ffffff 0%, #e6ecfb 26%, #b9c8f4 54%, #5a77d6 80%, #182544 100%);
-    /* 渐变从边框外缘开始画，避免底色在顶部边框下重复出现一道深色线 */
-    background-origin: border-box;
-    background-repeat: no-repeat;
-    box-shadow: 0 2.2rem 3.5rem -2rem rgb(22 33 58 / 0.5);
-  }
-
-  .stage-frame-inner {
-    position: absolute;
-    inset: var(--frame-inset);
-    border: 1px dashed rgb(61 99 232 / 0.35);
-    border-radius: calc(var(--frame-w) / 2 - var(--frame-inset))
-      calc(var(--frame-w) / 2 - var(--frame-inset)) calc(var(--frame-foot) - 0.35rem)
-      calc(var(--frame-foot) - 0.35rem);
+  .live2d-slot {
+    height: min(70cqh, 100cqw * 1170 / 1080);
+    aspect-ratio: 1080 / 1170;
   }
 
   .thin-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: theme('colors.mist.deep') transparent;
+  }
+}
+
+@keyframes overlay-fade-in {
+  from {
+    opacity: 0;
   }
 }
 
@@ -98,5 +138,11 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+  }
+
+  /* 工具栏直接切换，不做动画 */
+  .nav-rail,
+  .nav-rail-content {
+    transition: none;
   }
 }

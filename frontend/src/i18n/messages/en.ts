@@ -10,6 +10,9 @@ export const en: Messages = {
     api: { label: 'API', title: 'Model & API' },
     settings: { label: 'Settings', title: 'Settings' },
   },
+  overlay: {
+    close: 'Close',
+  },
   conversations: {
     title: (character) => `Chats with ${character.englishName}`,
     new: 'New chat',
@@ -87,11 +90,5 @@ export const en: Messages = {
       unknown: 'Something went wrong. Please try again.',
       save: "This message couldn't be saved in your browser, so it wasn't sent. Please send it again.",
     },
-  },
-  stage: {
-    label: (character) => `Portrait of ${character.englishName}`,
-    online: 'Online',
-    typing: 'Typing…',
-    live2dPending: 'Live2D in preparation',
   },
 };

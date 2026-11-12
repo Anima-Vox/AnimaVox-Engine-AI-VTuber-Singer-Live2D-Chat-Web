@@ -13,6 +13,9 @@ export const zhCN = {
     api: { label: 'API', title: '模型与 API' },
     settings: { label: '设置', title: '设置' },
   },
+  overlay: {
+    close: '关闭',
+  },
   conversations: {
     title: (character: Names) => `和${character.shortName}的对话`,
     new: '新对话',
@@ -87,12 +90,6 @@ export const zhCN = {
       unknown: '出了点意外，请再试一次。',
       save: '这句话没能保存到浏览器，所以没有发出去，请再发一次。',
     } satisfies Record<Exclude<NoticeReason, 'http'>, string>,
-  },
-  stage: {
-    label: (character: Names) => `${character.name}的形象`,
-    online: '在线',
-    typing: '正在输入…',
-    live2dPending: 'Live2D 准备中',
   },
 };
 

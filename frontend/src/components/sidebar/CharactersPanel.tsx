@@ -3,7 +3,7 @@ import { isLocked, type CharacterProfile } from '../../config/characters';
 import { useT } from '../../i18n';
 import { Avatar } from '../common/Avatar';
 import { LockIcon, PlusIcon } from '../common/icons';
-import { SidePanel } from './SidePanel';
+import { OverlayPanel } from '../overlay/OverlayPage';
 
 interface CharactersPanelProps {
   characters: readonly CharacterProfile[];
@@ -15,7 +15,7 @@ interface CharactersPanelProps {
 export function CharactersPanel({ characters, activeId, onSelect }: CharactersPanelProps) {
   const t = useT().characters;
   return (
-    <SidePanel title={t.title}>
+    <OverlayPanel title={t.title}>
       <ul className="flex flex-col gap-2">
         {characters.map((character) => {
           const isActive = character.id === activeId;
@@ -64,6 +64,6 @@ export function CharactersPanel({ characters, activeId, onSelect }: CharactersPa
           <span className="block text-[0.8rem]">{t.comingSoon}</span>
         </span>
       </button>
-    </SidePanel>
+    </OverlayPanel>
   );
 }

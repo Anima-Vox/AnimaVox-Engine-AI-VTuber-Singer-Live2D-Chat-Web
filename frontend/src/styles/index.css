@@ -12,10 +12,16 @@
     font-size: clamp(15px, calc(0.45vw + 7px), 20px);
   }
 
-  /* 左侧工具栏的尺寸（NavRail） */
+  /* 左侧工具栏的尺寸与动画（NavRail） */
   :root {
     /* 展开后的宽度 */
     --nav-width: 4.6rem;
+    /* 收起时在屏幕最左边露出的窄条 */
+    --nav-peek: 0.5rem;
+    /* 鼠标感应范围：从屏幕左缘算起约 1 cm，窄条以外的部分透明 */
+    --nav-hotzone: 2.4rem;
+    --nav-duration: 280ms;
+    --nav-ease: cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   html,
@@ -50,6 +56,29 @@
 }
 
 @layer components {
+  /*
+   * 左侧工具栏：收起时整条往左移，只露出右缘 --nav-peek 宽的窄条（颜色就是工具栏本身的 night），
+   * 里面的图标淡出；展开时滑回来、图标淡入。只动 transform 与 opacity，动画才平滑。
+   */
+  .nav-rail {
+    transform: translateX(calc(var(--nav-peek) - 100%));
+    transition: transform var(--nav-duration) var(--nav-ease);
+    will-change: transform;
+  }
+
+  .nav-rail[data-expanded='true'] {
+    transform: translateX(0);
+  }
+
+  .nav-rail-content {
+    opacity: 0;
+    transition: opacity var(--nav-duration) var(--nav-ease);
+  }
+
+  .nav-rail[data-expanded='true'] .nav-rail-content {
+    opacity: 1;
+  }
+
   /*
    * 二级页面：窄屏（< 800px）接近全宽，左边让出展开的工具栏；
    * 800px 以上与对话栏同宽（60vw），水平垂直置中。高度都是 75vh，内容在页面内部滚动。
@@ -109,5 +138,11 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+  }
+
+  /* 工具栏直接切换，不做动画 */
+  .nav-rail,
+  .nav-rail-content {
+    transition: none;
   }
 }

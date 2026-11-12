@@ -8,3 +8,16 @@ import 'fake-indexeddb/auto';
 afterEach(() => {
   cleanup();
 });
+
+// jsdom 没有 PointerEvent：补一个最小版本，让测试可以指定 pointerType（mouse / touch）
+if (typeof window.PointerEvent === 'undefined') {
+  class PointerEventPolyfill extends MouseEvent {
+    readonly pointerType: string;
+
+    constructor(type: string, init: PointerEventInit = {}) {
+      super(type, init);
+      this.pointerType = init.pointerType ?? '';
+    }
+  }
+  window.PointerEvent = PointerEventPolyfill as unknown as typeof PointerEvent;
+}

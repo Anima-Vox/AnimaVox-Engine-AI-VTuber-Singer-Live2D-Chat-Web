@@ -20,7 +20,8 @@ import { useLocaleStore } from './stores/localeStore';
 /**
  * 主界面：主页只有中间的对话栏（宽 60vw、水平置中、上下占满；窄于 800px 时全宽）。
  * - 对话栏中间、消息后面一层是 Live2D 预留位置（透明、无框）。
- * - 左边工具栏的每一项都打开盖在主页上的二级页面（见 OverlayPage），主页在后面模糊柔焦。
+ * - 左边工具栏浮在主页之上，平时收起，鼠标靠近才滑出（见 NavRail）。
+ * - 工具栏的每一项都打开盖在主页上的二级页面（见 OverlayPage），主页在后面模糊柔焦。
  */
 export function App() {
   /** 当前打开的二级页面；null = 只显示主页 */
@@ -85,12 +86,13 @@ export function App() {
   }
 
   return (
-    <div className="flex h-full">
+    <div className="h-full">
       <NavRail ref={navRef} active={panel} onSelect={setPanel} />
 
+      {/* 窄屏全宽时，左边让出露出的窄条 */}
       <main
         ref={mainRef}
-        className="mx-auto flex h-full min-w-0 flex-1 flex-col min-[800px]:w-[60vw] min-[800px]:flex-none"
+        className="mx-auto flex h-full w-full min-w-0 flex-col pl-[var(--nav-peek)] min-[800px]:w-[60vw] min-[800px]:pl-0"
       >
         <ChatHeader character={character} title={activeTitle} mode={chatTransport.mode} />
         {/* 消息区：Live2D 预留位置在后（z-0），消息在前（z-10） */}

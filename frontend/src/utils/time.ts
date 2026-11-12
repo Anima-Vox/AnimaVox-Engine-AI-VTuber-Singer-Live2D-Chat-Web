@@ -1,4 +1,4 @@
-/** 存下来的时间都是 ISO 字串；这里把它们转成界面上显示的样子 */
+/** 后端给的时间都是 ISO 字串；这里把它们转成界面上显示的样子 */
 
 function pad(value: number): string {
   return value.toString().padStart(2, '0');

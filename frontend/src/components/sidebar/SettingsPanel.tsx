@@ -3,8 +3,9 @@ import { LOCALE_OPTIONS } from '../../i18n/locales';
 import { useLocaleStore } from '../../stores/localeStore';
 import { Select } from '../common/Select';
 import { OverlayPanel } from '../overlay/OverlayPage';
+import { AccountSection } from './AccountSection';
 
-/** 设置：界面语言 + 说明 */
+/** 设置：界面语言、说明，以及帐号 */
 export function SettingsPanel() {
   const t = useT().settings;
   const locale = useLocaleStore((state) => state.locale);
@@ -21,7 +22,7 @@ export function SettingsPanel() {
             labelledBy="ui-language-label"
             value={locale}
             options={LOCALE_OPTIONS}
-            onChange={(next) => void setLocale(next)}
+            onChange={setLocale}
           />
         </dd>
         <dt className="text-haze">{t.history}</dt>
@@ -31,6 +32,7 @@ export function SettingsPanel() {
         <dt className="text-haze">{t.version}</dt>
         <dd className="text-ink">{t.versionValue}</dd>
       </dl>
+      <AccountSection />
     </OverlayPanel>
   );
 }

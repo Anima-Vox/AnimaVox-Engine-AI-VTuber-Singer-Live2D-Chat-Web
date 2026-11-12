@@ -1,41 +1,75 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 
 /**
- * 端到端测试：用真的浏览器操作前端（纯净版没有后端，回复来自浏览器里的演示台词）。
- * 运行：npm run test:e2e（前端没在运行时会自动启动）。
+ * 端到端测试：用真的浏览器操作真的前端与后端（回复来自后端的 Mock 模型）。
+ * 运行：npm run test:e2e（前后端没在运行时会自动启动）。
+ *
+ * 每个用例开始前通过接口注册一个新的测试帐号并登录，结束后把帐号删除，
+ * 所以用例之间互不影响，也不会在数据库里留下资料。
  */
 
-test.beforeEach(async ({ page }) => {
+const PASSWORD = 'e2e-password-123';
+
+/** 这个用例建立过的测试帐号（结束后全部删除） */
+let accounts: string[] = [];
+
+function newEmail(): string {
+  const email = `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
+  accounts.push(email);
+  return email;
+}
+
+/** 通过接口注册帐号（还没接寄信服务，验证码会随接口回传），回传登录 token */
+async function registerByApi(request: APIRequestContext, email: string): Promise<string> {
+  const sent = await request.post('/api/auth/email-code', { data: { email } });
+  const { devCode } = (await sent.json()) as { devCode: string };
+  const registered = await request.post('/api/auth/register', {
+    data: {
+      email,
+      code: devCode,
+      password: PASSWORD,
+      username: '测试员',
+      trainingConsent: true,
+      noticeVersion: 1,
+    },
+  });
+  expect(registered.ok()).toBe(true);
+  return ((await registered.json()) as { token: string }).token;
+}
+
+let email = '';
+let token = '';
+
+test.beforeEach(async ({ page, request }) => {
+  accounts = [];
+  email = newEmail();
+  token = await registerByApi(request, email);
+  // 把 token 放进浏览器，等于已经登录
   await page.goto('/');
-  // 每个用例从空白的浏览器资料开始
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolve) => {
-        const request = indexedDB.deleteDatabase('lijiaying-chat');
-        request.onsuccess = () => resolve();
-        request.onerror = () => resolve();
-      }),
-  );
+  await page.evaluate((value) => localStorage.setItem('animavox.token', value), token);
   await page.reload();
+  await expect(page.getByRole('textbox', { name: '消息输入框' })).toBeEnabled();
+});
+
+test.afterEach(async ({ request }) => {
+  for (const account of accounts) {
+    const login = await request.post('/api/auth/login', {
+      data: { email: account, password: PASSWORD },
+    });
+    // 用例里已经删除的帐号登录不了，不用再删
+    if (login.ok()) {
+      const { token: fresh } = (await login.json()) as { token: string };
+      await request.delete('/api/me', {
+        headers: { Authorization: `Bearer ${fresh}` },
+        data: { password: PASSWORD },
+      });
+    }
+  }
 });
 
 /* ---------- 用例里重复用到的动作 ---------- */
 
-/** 在浏览器里读出已保存的界面语言（settings 表） */
-function readSavedLocale(): Promise<string | null> {
-  return new Promise((resolve) => {
-    const request = indexedDB.open('lijiaying-chat');
-    request.onsuccess = () => {
-      const read = request.result.transaction('settings').objectStore('settings').get('locale');
-      read.onsuccess = () => {
-        request.result.close();
-        resolve((read.result as { value?: string } | undefined)?.value ?? null);
-      };
-    };
-    request.onerror = () => resolve(null);
-  });
-}
-
+/** 说一句话，并等到角色回复完（「停止」按钮消失） */
 async function say(page: Page, text: string): Promise<void> {
   const input = page.getByRole('textbox', { name: '消息输入框' });
   await input.fill(text);
@@ -90,9 +124,9 @@ async function openPage(
   return dialog;
 }
 
-test('发送消息后收到回复，刷新后记录还在', async ({ page }) => {
+test('发送消息后收到回复（角色用用户名称呼），刷新后记录还在', async ({ page }) => {
   await say(page, '你好');
-  await expect(page.locator('article[aria-label="佳尹说"]')).toHaveCount(1);
+  await expect(page.locator('article[aria-label="佳尹说"]')).toContainText('测试员，嗨');
 
   await page.reload();
   await expect(page.locator('article')).toHaveCount(2);
@@ -190,24 +224,21 @@ test('界面可以切换成繁体与英文，角色台词不变，刷新后仍�
   await expect(page.getByRole('textbox', { name: 'Message input' })).toBeVisible();
   await expect(page.getByText('嗨，我是佳尹。今天想聊点什么？')).toBeVisible();
 
-  // 等语言设置写进本地数据库后再刷新
-  await expect.poll(() => page.evaluate(readSavedLocale)).toBe('en');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await openPage(page, 'Chats', 'Chats with Jayin Li', 'Main menu');
 });
 
-test('没拿到回复时显示提示与重试按钮；重试不会多出一句', async ({ page }) => {
+test('模型出错时显示原因与重试按钮；重试不会多出一句', async ({ page }) => {
   await say(page, '模拟错误');
-  await expect(page.getByRole('alert')).toContainText('没有收到回复');
+  await expect(page.getByRole('alert')).toContainText('没有收到回复。模型暂时连不上');
 
-  // 这句话永远失败：重试后还是同一句、同一个提示
+  // Mock 模型对这句话永远失败：重试后还是同一句、同一个提示
   await page.getByRole('button', { name: '重试' }).click();
-  await expect(page.getByRole('button', { name: '停止等待回复' })).toHaveCount(0);
-  await expect(page.getByRole('alert')).toContainText('没有收到回复');
+  await expect(page.getByRole('alert')).toContainText('模型暂时连不上');
   await expect(page.locator('article[aria-label="你说"]')).toHaveCount(1);
 
-  // 刷新后这句话还在，并提示还没有回复
+  // 刷新后这句话还在（后端只存了一次），并提示还没有回复
   await page.reload();
   await expect(page.locator('article')).toHaveCount(1);
   await expect(page.getByRole('status').filter({ hasText: '还没有收到回复' })).toBeVisible();
@@ -425,5 +456,127 @@ test.describe('二级页面', () => {
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(navRail(page).getByRole('button', { name: '对话', exact: true })).toBeFocused();
     await expect(navRail(page)).toHaveAttribute('data-expanded', 'true');
+  });
+});
+
+test.describe('帐号', () => {
+  /** 打开「设置」里的帐号区块 */
+  async function openAccount(page: Page): Promise<Locator> {
+    const settings = await openPage(page, '设置', '设置');
+    return settings.getByRole('region', { name: '帐号' });
+  }
+
+  async function logout(page: Page): Promise<void> {
+    const account = await openAccount(page);
+    await account.getByRole('button', { name: '登出' }).click();
+    await expect(page.getByRole('tab', { name: '登录' })).toBeVisible();
+  }
+
+  async function login(page: Page, loginEmail: string, password: string): Promise<void> {
+    await page.getByLabel('邮箱').fill(loginEmail);
+    await page.getByLabel('密码').fill(password);
+    await page.getByRole('button', { name: '登录' }).click();
+  }
+
+  test('注册：验证码显示在页面上；说明没滑到底不能选；注册后角色用用户名称呼', async ({ page }) => {
+    await logout(page);
+    await page.getByRole('tab', { name: '注册' }).click();
+
+    // 寄验证码：还没接寄信服务，验证码直接显示在页面上
+    await page.getByLabel('邮箱').fill(newEmail());
+    await page.getByRole('button', { name: '寄验证码' }).click();
+    const sent = page.getByRole('status').filter({ hasText: '开发模式验证码' });
+    const code = /验证码：(\d{6})/.exec((await sent.textContent()) ?? '')?.[1] ?? '';
+    await expect(page.getByRole('button', { name: /秒后可重寄/ })).toBeDisabled();
+
+    await page.getByLabel('验证码').fill(code);
+    await page.getByLabel('密码').fill(PASSWORD);
+    await page.getByLabel('用户名').fill('小柯');
+    await page.getByRole('button', { name: '下一步：阅读说明' }).click();
+
+    // 说明没滑到底：两个选项都不能按
+    const agree = page.getByRole('button', { name: '同意用于训练' });
+    const disagree = page.getByRole('button', { name: '不同意', exact: true });
+    await expect(agree).toBeDisabled();
+    await expect(disagree).toBeDisabled();
+    await page
+      .locator('[data-consent-scroll]')
+      .evaluate((box) => box.scrollTo(0, box.scrollHeight));
+    await expect(agree).toBeEnabled();
+
+    // 选「不同意」也能完成注册并正常对话
+    await disagree.click();
+    await say(page, '你好');
+    await expect(page.locator('article[aria-label="佳尹说"]')).toContainText('小柯，嗨');
+    await expect(await openAccount(page)).toContainText('不同意用于训练');
+  });
+
+  test('登出后再登录，对话记录还在（记录在后端）；密码不对有提示', async ({ page }) => {
+    await say(page, '你好');
+    await logout(page);
+
+    await login(page, email, 'wrong-password');
+    await expect(page.getByRole('alert')).toHaveText('邮箱或密码不正确。');
+
+    await login(page, email, PASSWORD);
+    await expect(page.locator('article')).toHaveCount(2);
+  });
+
+  test('改用户名后角色用新名字称呼；撤回训练同意后不能再开启', async ({ page }) => {
+    const account = await openAccount(page);
+    await account.getByRole('textbox', { name: '用户名' }).fill('阿汶');
+    await account.getByRole('button', { name: '保存' }).click();
+    await expect(account.getByRole('button', { name: '已保存' })).toBeVisible();
+
+    await expect(account).toContainText('同意用于训练');
+    await account.getByRole('button', { name: '撤回训练同意' }).click();
+    await account.getByRole('button', { name: '确定撤回' }).click();
+    await expect(account).toContainText('已撤回（不再用于之后的训练）');
+    await expect(account.getByRole('button', { name: '撤回训练同意' })).toHaveCount(0);
+
+    await page.keyboard.press('Escape');
+    await say(page, '你好');
+    await expect(page.locator('article[aria-label="佳尹说"]')).toContainText('阿汶，嗨');
+  });
+
+  test('删除帐号要输入密码；删除后回到登录页，不能再登录', async ({ page }) => {
+    const account = await openAccount(page);
+    await account.getByRole('button', { name: '删除帐号' }).click();
+    const form = account.getByRole('form', { name: '删除帐号' });
+
+    await form.getByLabel(/请输入密码确认/).fill('wrong-password');
+    await form.getByRole('button', { name: '确定删除' }).click();
+    await expect(account.getByRole('alert')).toHaveText('邮箱或密码不正确。');
+
+    await form.getByLabel(/请输入密码确认/).fill(PASSWORD);
+    await form.getByRole('button', { name: '确定删除' }).click();
+    await expect(page.getByRole('tab', { name: '登录' })).toBeVisible();
+
+    await login(page, email, PASSWORD);
+    await expect(page.getByRole('alert')).toHaveText('邮箱或密码不正确。');
+  });
+
+  test('登录失效（token 被后端作废）时自动回到登录页', async ({ page, request }) => {
+    await request.post('/api/auth/logout', { headers: { Authorization: `Bearer ${token}` } });
+
+    const input = page.getByRole('textbox', { name: '消息输入框' });
+    await input.fill('你好');
+    await input.press('Enter');
+
+    await expect(page.getByRole('tab', { name: '登录' })).toBeVisible();
+  });
+
+  test('换一个帐号登录，看不到上一个帐号的对话', async ({ page, request }) => {
+    await say(page, '这是第一个帐号说的话');
+    await logout(page);
+
+    const other = newEmail();
+    await registerByApi(request, other);
+    await login(page, other, PASSWORD);
+
+    await expect(page.getByText('嗨，我是佳尹。今天想聊点什么？')).toBeVisible();
+    await expect(page.locator('article')).toHaveCount(0);
+    const dialog = await openPage(page, '对话', '和佳尹的对话');
+    await expect(dialog.getByText('发出第一句话后，对话会保存在这里。')).toBeVisible();
   });
 });

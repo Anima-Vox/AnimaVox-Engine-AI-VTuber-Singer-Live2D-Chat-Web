@@ -20,7 +20,11 @@
     "noImplicitOverride": true,
     "noImplicitReturns": true,
     "exactOptionalPropertyTypes": false,
-    "noUncheckedIndexedAccess": true
+    "noUncheckedIndexedAccess": true,
+
+    "paths": {
+      "@shared": ["./packages/shared/src/index.ts"]
+    }
   },
   "exclude": ["node_modules", "dist"]
 }

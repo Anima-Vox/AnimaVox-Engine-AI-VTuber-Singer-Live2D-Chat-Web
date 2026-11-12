@@ -97,6 +97,7 @@ vite.config.ts.timestamp-*
 # Database
 *.sqlite
 *.db
+backend/data/
 
 # Trae
 .trae/cache/

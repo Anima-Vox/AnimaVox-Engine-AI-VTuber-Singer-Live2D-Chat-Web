@@ -7,7 +7,7 @@ interface ChatHeaderProps {
   title: string | null;
 }
 
-/** 对话区顶栏：角色名字 + 目前对话的标题，右边提示这是演示模式 */
+/** 对话区顶栏：角色名字 + 目前对话的标题 */
 export function ChatHeader({ character, title }: ChatHeaderProps) {
   const t = useT();
   return (
@@ -17,9 +17,6 @@ export function ChatHeader({ character, title }: ChatHeaderProps) {
         <span className="font-voice">{character.name} · </span>
         {title ?? t.conversations.untitled}
       </h1>
-      <p className="shrink-0 rounded-full bg-mist-deep px-3.5 py-1.5 text-[0.8rem] text-haze">
-        {t.chat.demoBadge}
-      </p>
     </header>
   );
 }

@@ -1,10 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const BASE_URL = 'http://localhost:5173';
-
 /**
- * 端到端测试（npm run test:e2e）的设定：用真的浏览器操作前端。
- * 纯净版没有后端；前端已经在运行（npm run dev）就直接使用，没有就自动启动。
+ * 端到端测试（npm run test:e2e）的设定：用真的浏览器操作真的前端与后端。
+ * 前后端已经在运行（npm run dev）就直接使用，没有就自动启动。
  */
 export default defineConfig({
   testDir: './frontend/e2e',
@@ -17,7 +15,8 @@ export default defineConfig({
   reporter: [['list']],
   outputDir: './frontend/e2e/.artifacts',
   use: {
-    baseURL: BASE_URL,
+    // 浏览器只连前端；/api 由前端的开发服务器转给后端（同网域）
+    baseURL: 'http://localhost:5173',
     locale: 'zh-CN',
     timezoneId: 'Asia/Shanghai',
     trace: 'off',
@@ -39,10 +38,18 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], viewport: { width: 1920, height: 1080 } },
     },
   ],
-  webServer: {
-    command: 'npm run dev',
-    url: BASE_URL,
-    reuseExistingServer: true,
-    timeout: 120_000,
-  },
+  webServer: [
+    {
+      command: 'npm run dev:backend',
+      url: 'http://127.0.0.1:3001/api/health',
+      reuseExistingServer: true,
+      timeout: 120_000,
+    },
+    {
+      command: 'npm run dev:frontend',
+      url: 'http://localhost:5173',
+      reuseExistingServer: true,
+      timeout: 120_000,
+    },
+  ],
 });

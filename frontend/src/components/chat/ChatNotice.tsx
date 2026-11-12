@@ -13,8 +13,8 @@ export function ChatNotice({ notice, onRetry, onDismiss }: ChatNoticeProps) {
   const t = useT().notice;
   const isError = notice.kind === 'error';
   const text = t.reasons[notice.reason];
-  // 没存进浏览器、或读取记录失败时没有东西可以重试，只留「关闭」
-  const canRetry = notice.reason !== 'save' && notice.reason !== 'history';
+  // 额度用完、登录过期时重试也没用，只留「关闭」
+  const canRetry = notice.reason !== 'quota_exceeded' && notice.reason !== 'unauthorized';
 
   return (
     <div

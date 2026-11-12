@@ -20,8 +20,8 @@
 ---
 
 > **⚠️ 開發階段聲明**
-> **這是純淨版**：只有第三版前端（AnimaVox 文字對話版）與瀏覽器內的演示回覆，**沒有後端，也沒有任何後端接口**；怎麼接後端完全交給後端決定。說明見 [純淨版說明](纯净版说明.md) 與 [frontend/README.md](frontend/README.md)。
-> 真實 LLM、後端儲存、語音管線（GPT-SoVITS TTS / STT）、長期記憶與 Live2D 渲染均未實作。下列產品願景與路線圖不代表已完成功能。
+> 本倉庫目前是**第三版前端（AnimaVox 文字對話版）與帳號、對話保管已接好的後端（模型仍為 Mock）**（見下方[快速開始](#-快速開始-quick-start)）。接口約定見 [接口約定-v1.md](接口約定-v1.md)。第三版前端的說明見 [frontend/README.md](frontend/README.md)。
+> 真實 LLM、寄信服務、金鑰加密、語音管線（GPT-SoVITS TTS / STT）、長期記憶與 Live2D 渲染均未實作。下列產品願景與路線圖不代表已完成功能。
 > 歡迎透過 Issue 參與討論，或見下方[招募段落](#-招募同伴我們正在尋找開發夥伴-we-are-hiring)。
 >
 > **版本說明**：第一版為最初版本；第二版為以 Live2D 開源專案製作的引導版，已由第三版取代（加上 Codex 修正的存檔在 `feature/v2-codex-fixes`）；第三版為 AnimaVox 文字對話版，也就是目前的 `main`（本文件所描述）。
@@ -130,7 +130,7 @@ Phase 1 只做**文字對話版**，其餘全部移至 Phase 2：
 ### 🛡️ 核心特性
 
 1.  **雙層架構 (Two-Layer Design)**：開源引擎供任何人自備 Key 使用；李佳尹官方實例 100% 運行於官方 API，確保角色一致性與品質。
-2.  **本機儲存 (Local-First，已實作)**：聊天紀錄只保存在瀏覽器 `IndexedDB`，不會離開瀏覽器。
+2.  **對話由後端保管（已實作）**：帳號與聊天紀錄保存在後端的 SQLite，換裝置登入也看得到；前端只送新的一句。
 3.  **語音可選 (Voice as Optional Layer)**：TTS / STT 為可插拔模組，任一失效不影響文字對話。李佳尹官方版使用專屬訓練音色。
 4.  **Live2D 沉浸渲染（規劃，Phase 2）**：第三版已在對話欄中間預留 Live2D 位置（透明、無框）；之後整合 Live2D，由 AI 返回的 `emotion` 欄位驅動模型表情聯動，口型同步同樣在 Phase 2。
 5.  **多模型自由切換**：相容 OpenAI API 格式（引擎預設 **DeepSeek V4 Pro**，模型 ID `deepseek-v4-pro`），支援在設定頁配置多組 API URL/Key，一鍵切換不掉上下文。
@@ -141,27 +141,34 @@ Phase 1 只做**文字對話版**，其餘全部移至 Phase 2：
 ### 💻 技術棧 (Tech Stack)
 
 **已實作（本分支可運行）**
-*   **Frontend**: React 18 + Vite + TypeScript + Tailwind CSS + Zustand + Dexie.js (IndexedDB)（Live2D 位置已預留，渲染器於 Phase 2 接入）
+*   **Frontend**: React 18 + Vite + TypeScript + Tailwind CSS + Zustand（Live2D 位置已預留，渲染器於 Phase 2 接入）
+*   **Backend**: Node.js ≥ 22.13 + Fastify + TypeScript + SQLite（Node 內建）：帳號、對話紀錄、每日額度；模型仍為 Mock
+*   **Shared**: Zod（接口約定 v1 的資料格式，前後端共用，位於 `packages/shared`）
 *   **測試**: Vitest（單元測試）+ Playwright（E2E，1280×720 / 1920×1080 / 2560×1440）
 
 **規劃導入**
-*   **Backend**: Drizzle ORM + SQLite 雙寫、真實 LLM 適配器（DeepSeek V4 Pro）、內容安全中間件
+*   **Backend**: 真實 LLM 適配器（DeepSeek V4 Pro）、寄信服務、內容安全中間件
 *   **Voice**: GPT-SoVITS（TTS，專屬音色）+ STT 服務（待定）
 
 ---
 
 ## 🚀 快速開始 (Quick Start)
 
-> 以下为第三版（AnimaVox 文字对话版）的**纯净版**：只有前端。说明见 [纯净版说明](纯净版说明.md) 与 [frontend/README.md](frontend/README.md)。
+> 以下为第三版（AnimaVox 文字对话版）的全接口版：前端 + 后端，接口照 [接口约定-v1.md](接口约定-v1.md)。前端的说明见 [frontend/README.md](frontend/README.md)。
 
-**环境要求**：Node.js ≥ 20、npm ≥ 10。
+**环境要求**：Node.js ≥ 22.13（后端使用 Node 内建的 SQLite）、npm ≥ 10。
 
 ```bash
 npm install
 npm run dev
 ```
 
-浏览器打开 <http://localhost:5173> 就能直接聊天：回复来自浏览器里的演示台词，不需要帐号、不需要任何 API Key，也没有后端。发送「模拟错误」可以查看出错提示与重试。
+`npm run dev` 会同时启动前端（5173）与后端（3001）。浏览器打开 <http://localhost:5173>，注册一个帐号就能开始聊天，不需要任何设定文件。
+
+- **帐号**：邮箱 + 密码 + 邮箱验证码，并设定用户名（佳尹与阿糯用它称呼你）。注册时要把说明滑到底，再选择是否同意对话用于训练本地模型；之后只能撤回，不能再开启。
+- **验证码**：还没接寄信服务，验证码会直接显示在注册页上，也会印在后端日志里。
+- **回复**：还没接真实模型，角色照演示台词回复。发送「模拟错误」可以查看出错提示与重试。
+- **对话记录**：由后端保管（SQLite，文件在 `backend/data/animavox.db`，不进 Git）。想清空全部资料，停掉后端后删除 `backend/data/` 即可。
 
 ### 界面
 
@@ -171,56 +178,86 @@ npm run dev
 - **二级页面**：工具栏的对话、角色、人设、API、设置都打开盖在主页上的二级页面，主页在后面模糊柔焦；按 ✕ 或 Esc 关闭。
 - **角色**：李佳尹、羽澄糯为官方角色，人设、模型、形象锁定不可修改；使用者自建角色（自带人设、API、Live2D）为开源引擎功能，即将开放。
 - **界面语言**：「设置」里切换简体中文 / 繁體中文 / English，只影响界面文字，角色台词与聊天内容不转换。
+- **帐号**：「设置」里可以改用户名、撤回训练同意、登出、删除帐号。
+
+### 前后端怎么沟通
+
+完整约定见 [接口约定-v1.md](接口约定-v1.md)，资料格式只有一份：`packages/shared/src/schemas/api.ts`。
+
+- **同网域**：浏览器只连前端的网址，`/api` 开头的请求交给后端。开发时由 Vite 转发（`frontend/vite.config.ts`），正式部署时由反向代理转发。
+- **后端保管对话**：前端只送新的一句，并带 `characterId`（必填）与 `clientMessageId`（同一句重送不会重复写入）。
+- **整句回复**：这一版回整句；流式回复之后再加。
+- **错误固定五种**：`API_ERROR`、`MODEL_UNAVAILABLE`、`SERVICE_UNSTABLE`、`QUOTA_EXCEEDED`、`UNAUTHORIZED`。
+- **前端不发送 System Prompt、不持有任何 API Key**：人设与模型由后端决定。
+
+后端可以用环境变量调整的设定（端口、每日额度等）见 [接口约定-v1.md 第八节](接口约定-v1.md#八后端环境变量)。
 
 ### 常用命令
 
 ```bash
-npm run dev          # 启动前端（5173）
+npm run dev          # 同时启动前端(5173) 与后端(3001)
 npm run build        # 打包前端，产物在 frontend/dist
-npm run typecheck    # TypeScript 检查
+npm run typecheck    # 全项目 TypeScript 检查
 npm run lint         # ESLint
-npm run test         # 单元测试
-npm run test:e2e     # 端到端测试（真的浏览器；前端没在运行时会自动启动）
+npm run test         # 单元测试（后端接口 + 前端）
+npm run test:e2e     # 端到端测试（真的浏览器 + 真的前后端；没在运行时会自动启动）
 npm run format       # Prettier 格式化
 ```
 
-端到端测试覆盖 Chrome 的 1280×720、1920×1080、2560×1440 三个分辨率；第一次运行前先执行 `npx playwright install chromium`。
+端到端测试覆盖 Chrome 的 1280×720、1920×1080、2560×1440 三个分辨率；第一次运行前先执行 `npx playwright install chromium`。每个用例会注册一个测试帐号，结束后删除。
 
 ### 目录结构
 
 ```
-├── 纯净版说明.md             # 这个版本有什么、之后接后端要改哪里
+├── 接口约定-v1.md            # 前后端的接口约定（文字说明）
+├── packages/shared/          # 接口约定的资料格式（Zod），前后端共用
 ├── frontend/                 # 前端：React 18 + Vite + Tailwind（详见 frontend/README.md）
 │   ├── e2e/                  # 端到端测试
 │   └── src/
-│       ├── App.tsx           # 主页布局与二级页面切换
-│       ├── types.ts          # 对话、消息、角色回复的资料格式
-│       ├── components/       # nav / overlay / sidebar / chat / live2d / common
+│       ├── App.tsx           # 最外层：没登录显示登录页，登录后显示主界面
+│       ├── components/       # auth / nav / overlay / sidebar / chat / live2d / common
 │       ├── config/           # 角色注册表
 │       ├── i18n/             # 界面语言（简体 / 繁體 / English）
-│       ├── services/         # 角色的回复从哪里来（目前是演示台词）
-│       ├── stores/           # 状态：对话 / 目前的角色 / 界面语言
-│       └── db/               # 浏览器里的数据库（IndexedDB）
+│       ├── services/api/     # 呼叫后端的唯一出口
+│       └── stores/           # 状态：帐号 / 对话 / 目前的角色 / 界面语言
+├── backend/                  # 后端：Fastify + SQLite
+│   ├── migrations/           # 数据库表结构（只新增文件，不改旧的）
+│   └── src/
+│       ├── server.ts         # 入口
+│       ├── app.ts            # 错误格式 + 注册全部路由
+│       ├── routes/           # 接口：auth / me / conversations / chat / health
+│       ├── store.ts          # 全部 SQL
+│       ├── auth/             # 密码、token、寄验证码
+│       └── services/llm/     # 模型接口与 Mock 模型（演示台词）
 └── playwright.config.ts      # 端到端测试设定
 ```
 
+### 后端接手边界
+
+- **接真实模型**：照 `backend/src/services/llm/types.ts` 的 `LlmAdapter` 再写一个适配器，在 `backend/src/server.ts` 换掉 `createMockAdapter()`。适配器会拿到 `characterId`、用户名与最近的对话；人设由它按 `characterId` 读取，人设文件不要放进仓库。
+- **接寄信服务**：照 `backend/src/auth/mailer.ts` 的 `Mailer` 再写一个，在 `server.ts` 换掉 `createConsoleMailer()`。
+- **改表结构**：在 `backend/migrations/` 新增 `002_说明.sql`，不要改已有的文件；后端启动时会自动套用。
+- **同步到主机**：改动推上 GitHub → 主机 `git pull` → `npm install` → 重启后端。
+- **尚未提供**：正式部署用的反向代理设定、Docker、流式回复。
+
 ### 数据与隐私
 
-- 聊天记录只保存在本机浏览器的 IndexedDB（`lijiaying-chat`），不会离开浏览器；角色的回复连同 `emotion` / `action` / `expression` 一起保存，界面目前只显示文字。
-- 没有帐号，前端不持有、不保存任何 API Key。
+- 帐号与对话记录保存在后端的 SQLite 数据库。密码只存加盐的 scrypt 杂凑；登录 token 与验证码只存 SHA-256。
+- 每条消息都记下写入当时用户是否同意用于训练；撤回同意后，该用户的全部消息都改为不可用于训练。
+- 删除帐号会连同全部对话一起删除。
+- 浏览器里只保存登录 token、界面语言与上次选的角色（localStorage）。前端不持有、不保存任何 API Key。
 
 ### Roadmap
 
-**已完成（Phase 1 前端 · 第三版：AnimaVox 文字对话版）**
+**已完成（Phase 1 · 第三版：AnimaVox 文字对话版）**
 
-- AnimaVox 界面（置中的对话栏、自动收起的左侧工具栏、盖在主页上的二级页面、Live2D 预留位置）、官方角色锁定、每个角色独立的历史对话（新建 / 切换 / 删除）
-- 界面三语（简体 / 繁體 / English）
-- 切换或删除对话时取消正在等的回复；迟到的回复不会显示在别的对话，也不会写回已删除的对话；连按两次只发一次；存进浏览器失败时提示
+- AnimaVox 界面（置中的对话栏、自动收起的左侧工具栏、盖在主页上的二级页面、Live2D 预留位置）、官方角色锁定、每个角色独立的历史对话（新建 / 切换 / 删除）、界面三语
+- 接口约定 v1：帐号（邮箱 + 密码 + 验证码、训练同意）、后端保管对话、去重与重试、每日额度、固定的五种错误码、同网域 `/api`
 - 单元测试（Vitest）、端到端测试（Playwright，三个分辨率）
 
 **待接入**
 
-- Phase 1：后端与真实 LLM（接口由后端决定）、内容安全、部署与邀请制内测
+- Phase 1：真实 LLM（盲测选定）、寄信服务、流式回复、内容安全、部署与邀请制内测
 - Phase 2：Live2D 渲染、TTS 语音合成 / ASR 语音输入 / 口型同步、长期记忆、使用者自建角色（人设、API、Live2D）、英文用户的对话翻译模组、Function Calling
 - Docker 部署与 CI
 

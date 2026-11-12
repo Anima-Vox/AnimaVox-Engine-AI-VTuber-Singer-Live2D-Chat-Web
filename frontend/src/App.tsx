@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { AuthScreen } from './components/auth/AuthScreen';
 import { ChatHeader } from './components/chat/ChatHeader';
 import { Composer } from './components/chat/Composer';
 import { MessageList } from './components/chat/MessageList';
@@ -12,11 +13,14 @@ import { PersonaPanel } from './components/sidebar/PersonaPanel';
 import { SettingsPanel } from './components/sidebar/SettingsPanel';
 import { getCharacter, OFFICIAL_CHARACTERS } from './config/characters';
 import { useT } from './i18n';
+import { useAuthStore } from './stores/authStore';
 import { useCharacterStore } from './stores/characterStore';
 import { useChatStore } from './stores/chatStore';
 import { useLocaleStore } from './stores/localeStore';
 
 /**
+ * 整个应用的最外层：没登录时显示登录 / 注册页，登录后显示主界面。
+ *
  * 主界面：主页只有中间的对话栏（宽 60vw、水平置中、上下占满；窄于 800px 时全宽）。
  * - 对话栏中间、消息后面一层是 Live2D 预留位置（透明、无框）。
  * - 左边工具栏浮在主页之上，平时收起，鼠标靠近才滑出（见 NavRail）。
@@ -29,35 +33,40 @@ export function App() {
   const mainRef = useRef<HTMLElement>(null);
 
   const activeCharacterId = useCharacterStore((state) => state.activeCharacterId);
-  const isRestored = useCharacterStore((state) => state.isRestored);
-  const restoreCharacter = useCharacterStore((state) => state.restore);
   const switchCharacter = useCharacterStore((state) => state.switchTo);
 
   const locale = useLocaleStore((state) => state.locale);
-  const restoreLocale = useLocaleStore((state) => state.restore);
   const t = useT();
 
+  const authStatus = useAuthStore((state) => state.status);
+  const restoreAuth = useAuthStore((state) => state.restore);
+  const isSignedIn = authStatus === 'signed-in';
+
   const chat = useChatStore();
-  const { openCharacter } = chat;
+  const { openCharacter, clear: clearChat } = chat;
   const character = getCharacter(activeCharacterId);
   const isOverlayOpen = panel !== null;
 
+  // 打开页面时：确认上次的登录还有没有效
   useEffect(() => {
-    void restoreCharacter();
-    void restoreLocale();
-  }, [restoreCharacter, restoreLocale]);
+    void restoreAuth();
+  }, [restoreAuth]);
 
   // 让浏览器按语言选字形（繁体用繁中字体）
   useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
 
-  // 角色确定（或切换）后，读出这个角色的历史对话
+  // 登录后（或切换角色时）读出这个角色的历史对话；
+  // 登出后清空对话并关掉二级页面，下一位登录的人从主页开始
   useEffect(() => {
-    if (isRestored) {
+    if (isSignedIn) {
       void openCharacter(activeCharacterId);
+    } else {
+      clearChat();
+      setPanel(null);
     }
-  }, [isRestored, activeCharacterId, openCharacter]);
+  }, [isSignedIn, activeCharacterId, openCharacter, clearChat]);
 
   // 二级页面开着时，模糊层下的主页点不到、Tab 也走不进去，读屏软件也跳过
   useEffect(() => {
@@ -79,9 +88,14 @@ export function App() {
     opener?.focus();
   }
 
+  /** 选了角色后，直接切到和这个角色的「对话」页 */
   function handleSelectCharacter(characterId: string) {
-    void switchCharacter(characterId);
+    switchCharacter(characterId);
     setPanel('conversations');
+  }
+
+  if (!isSignedIn) {
+    return <AuthScreen status={authStatus} />;
   }
 
   return (

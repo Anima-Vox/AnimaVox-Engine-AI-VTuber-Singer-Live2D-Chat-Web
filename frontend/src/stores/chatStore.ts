@@ -1,24 +1,11 @@
 import { create } from 'zustand';
-import type { ChatContextMessage, Conversation, Message } from '@shared';
-import { APP_CONFIG } from '../config/app';
-import { db, type ChatDatabase } from '../db';
-import {
-  createConversation,
-  deleteConversation,
-  listConversationsByCharacter,
-  renameConversationByFirstMessage,
-  touchConversation,
-} from '../db/repositories/conversationRepository';
-import { addMessage, listMessages } from '../db/repositories/messageRepository';
-import {
-  chatTransport,
-  ChatTransportError,
-  isAbortError,
-  type ChatErrorCode,
-  type ChatTransport,
-} from '../services/chat';
+import type { Conversation, Message } from '@shared';
+import { chatBackend, LocalSaveError, type ChatBackend } from '../services/backend';
+import { ChatTransportError, isAbortError, type ChatErrorCode } from '../services/chat';
+import { createId } from '../utils/id';
+import { nowIso } from '../utils/time';
 
-/** loading = 正在读取本地记录；ready = 可以发送；waiting = 等角色回复 */
+/** loading = 正在读取对话记录；ready = 可以发送；waiting = 等角色回复 */
 export type ChatStatus = 'loading' | 'ready' | 'waiting';
 
 /** 提示的原因；对应的文字在 src/i18n 里按界面语言显示 */
@@ -46,12 +33,12 @@ export interface ChatState {
 
   /** 切换到某个角色：读出 TA 的历史对话，并打开最近的一个 */
   openCharacter: (characterId: string) => Promise<void>;
-  /** 开一个新对话（发出第一句话时才写入本地） */
+  /** 开一个新对话（发出第一句话时才建立） */
   startNewConversation: () => void;
   selectConversation: (conversationId: string) => Promise<void>;
   deleteConversation: (conversationId: string) => Promise<void>;
   send: (text: string) => Promise<void>;
-  /** 最后一条是用户消息时重新请求回复（不会重复写入用户消息） */
+  /** 最后一条是用户消息时重新请求回复（沿用同一个消息 id，不会重复写入） */
   retry: () => Promise<void>;
   /** 停止等待当前回复 */
   stop: () => void;
@@ -59,8 +46,7 @@ export interface ChatState {
 }
 
 export interface ChatStoreDeps {
-  transport: ChatTransport;
-  database: ChatDatabase;
+  backend: ChatBackend;
 }
 
 const UNANSWERED: ChatNotice = { kind: 'stopped', reason: 'unanswered' };
@@ -69,24 +55,19 @@ function toNotice(error: unknown): ChatNotice {
   if (isAbortError(error)) {
     return { kind: 'stopped', reason: 'aborted' };
   }
+  if (error instanceof LocalSaveError) {
+    return { kind: 'error', reason: 'save' };
+  }
   if (error instanceof ChatTransportError) {
     return { kind: 'error', reason: error.code, status: error.status, detail: error.detail };
   }
   return { kind: 'error', reason: 'unknown' };
 }
 
-/** 只把 user / assistant 的文字发给后端；人格 Prompt 由后端负责拼接 */
-export function buildContext(messages: Message[], windowSize: number): ChatContextMessage[] {
-  return messages
-    .filter((message) => message.role === 'user' || message.role === 'assistant')
-    .slice(-windowSize)
-    .map((message) => ({ role: message.role, content: message.content }));
-}
-
-/** 工厂函数：测试时可以注入假的 transport 与独立的数据库 */
-export function createChatStore({ transport, database }: ChatStoreDeps) {
+/** 工厂函数：测试时可以注入假的 backend */
+export function createChatStore({ backend }: ChatStoreDeps) {
   let controller: AbortController | null = null;
-  /** 正在处理一次发送（写入本地 + 等回复）；防止连按两次发出两条 */
+  /** 正在处理一次发送（建立对话 + 等回复）；防止连按两次发出两条 */
   let sending = false;
 
   function abortPending() {
@@ -96,63 +77,54 @@ export function createChatStore({ transport, database }: ChatStoreDeps) {
 
   return create<ChatState>()((set, get) => {
     async function refreshConversations(characterId: string): Promise<void> {
-      const conversations = await listConversationsByCharacter(characterId, database);
+      const conversations = await backend.listConversations(characterId);
       if (get().characterId === characterId) {
         set({ conversations });
       }
     }
 
     async function showConversation(conversationId: string): Promise<void> {
-      const messages = await listMessages(conversationId, database);
-      if (get().conversationId !== conversationId) {
-        return;
+      try {
+        const messages = await backend.listMessages(conversationId);
+        if (get().conversationId !== conversationId) {
+          return;
+        }
+        set({
+          messages,
+          status: 'ready',
+          notice: messages.at(-1)?.role === 'user' ? UNANSWERED : null,
+        });
+      } catch (error) {
+        if (get().conversationId === conversationId) {
+          set({ status: 'ready', notice: historyNotice(error) });
+        }
       }
-      set({
-        messages,
-        status: 'ready',
-        notice: messages.at(-1)?.role === 'user' ? UNANSWERED : null,
-      });
     }
 
-    /** 向后端要一条回复，成功后写入本地并更新界面 */
-    async function requestReply(characterId: string, conversationId: string): Promise<void> {
+    /** 把这句话（pending）送出去要回复；成功后换成后端存下的版本并接上回复 */
+    async function requestReply(
+      characterId: string,
+      conversationId: string,
+      pending: Pick<Message, 'id' | 'content'>,
+    ): Promise<void> {
       abortPending();
       const current = new AbortController();
       controller = current;
       set({ status: 'waiting', notice: null });
 
       try {
-        const result = await transport.send(
-          {
-            conversationId,
-            characterId,
-            modelConfigId: APP_CONFIG.modelConfigId,
-            messages: buildContext(get().messages, APP_CONFIG.contextWindow),
-          },
+        const result = await backend.sendMessage(
+          { conversationId, characterId, clientMessageId: pending.id, content: pending.content },
           { signal: current.signal },
         );
-
-        const { response } = result;
-        const reply = await addMessage(
-          {
-            id: result.messageId,
-            createdAt: result.createdAt,
-            conversationId,
-            role: 'assistant',
-            content: response.text,
-            emotion: response.emotion,
-            action: response.action,
-            expression: response.expression,
-            toolCalls: response.tool_calls,
-          },
-          database,
-        );
-        await touchConversation(conversationId, database);
-        await refreshConversations(characterId);
+        await refreshConversations(characterId).catch(() => undefined);
 
         // 切换对话或角色时请求会被中断；这里再确认一次，避免迟到的回复显示在别的对话里
         if (get().conversationId === conversationId) {
-          set({ messages: [...get().messages, reply], status: 'ready' });
+          const messages = get().messages.map((message) =>
+            message.id === pending.id ? result.userMessage : message,
+          );
+          set({ messages: [...messages, result.reply], status: 'ready' });
         }
       } catch (error) {
         if (get().conversationId === conversationId) {
@@ -185,7 +157,7 @@ export function createChatStore({ transport, database }: ChatStoreDeps) {
         });
 
         try {
-          const conversations = await listConversationsByCharacter(characterId, database);
+          const conversations = await backend.listConversations(characterId);
           if (get().characterId !== characterId) {
             return;
           }
@@ -196,8 +168,10 @@ export function createChatStore({ transport, database }: ChatStoreDeps) {
           } else {
             set({ status: 'ready' });
           }
-        } catch {
-          set({ status: 'ready', notice: { kind: 'error', reason: 'history' } });
+        } catch (error) {
+          if (get().characterId === characterId) {
+            set({ status: 'ready', notice: historyNotice(error) });
+          }
         }
       },
 
@@ -220,9 +194,13 @@ export function createChatStore({ transport, database }: ChatStoreDeps) {
         if (conversationId === get().conversationId) {
           get().startNewConversation();
         }
-        await deleteConversation(conversationId, database);
+        try {
+          await backend.deleteConversation(conversationId);
+        } catch (error) {
+          set({ notice: toNotice(error) });
+        }
         if (characterId) {
-          await refreshConversations(characterId);
+          await refreshConversations(characterId).catch(() => undefined);
         }
       },
 
@@ -237,29 +215,30 @@ export function createChatStore({ transport, database }: ChatStoreDeps) {
         try {
           let conversationId = get().conversationId;
           if (!conversationId) {
-            const conversation = await createConversation(
-              { characterId, activeModelId: APP_CONFIG.modelConfigId },
-              database,
-            );
+            let conversation: Conversation;
+            try {
+              conversation = await backend.createConversation(characterId);
+            } catch (error) {
+              // 对话没建立起来，这句话没有发出去
+              if (get().characterId === characterId) {
+                set({ status: 'ready', notice: toNotice(error) });
+              }
+              return;
+            }
             conversationId = conversation.id;
             set({ conversationId });
           }
 
-          const isFirstUserMessage = !get().messages.some((message) => message.role === 'user');
-          const userMessage = await addMessage({ conversationId, role: 'user', content }, database);
-          set({ messages: [...get().messages, userMessage] });
-
-          if (isFirstUserMessage) {
-            await renameConversationByFirstMessage(conversationId, content, database);
-          }
-          await refreshConversations(characterId);
-
-          await requestReply(characterId, conversationId);
-        } catch {
-          // 写入本地失败（requestReply 自己会处理请求失败），这句话没有发出去
-          if (get().characterId === characterId) {
-            set({ status: 'ready', notice: { kind: 'error', reason: 'save' } });
-          }
+          // 先显示用户这句话；id 同时是送给后端的 clientMessageId
+          const pending: Message = {
+            id: createId(),
+            conversationId,
+            role: 'user',
+            content,
+            createdAt: nowIso(),
+          };
+          set({ messages: [...get().messages, pending] });
+          await requestReply(characterId, conversationId, pending);
         } finally {
           sending = false;
         }
@@ -270,10 +249,11 @@ export function createChatStore({ transport, database }: ChatStoreDeps) {
         if (!characterId || !conversationId || status !== 'ready' || sending) {
           return;
         }
-        if (messages.at(-1)?.role !== 'user') {
+        const last = messages.at(-1);
+        if (last?.role !== 'user') {
           return;
         }
-        await requestReply(characterId, conversationId);
+        await requestReply(characterId, conversationId, last);
       },
 
       stop: () => {
@@ -285,4 +265,11 @@ export function createChatStore({ transport, database }: ChatStoreDeps) {
   });
 }
 
-export const useChatStore = createChatStore({ transport: chatTransport, database: db });
+/** 读取记录失败：后端回的错误照实显示，其他的显示「读取记录失败」 */
+function historyNotice(error: unknown): ChatNotice {
+  return error instanceof ChatTransportError
+    ? toNotice(error)
+    : { kind: 'error', reason: 'history' };
+}
+
+export const useChatStore = createChatStore({ backend: chatBackend });

@@ -20,8 +20,8 @@
 ---
 
 > **⚠️ 開發階段聲明**
-> 本倉庫目前是**第三版前端（AnimaVox 文字對話版）與最小 Mock 後端**（見下方[快速開始](#-快速開始-quick-start)）。正式後端尚未開工；`backend/` 僅供前端開發與測試。第三版前端的說明見 [frontend/README.md](frontend/README.md)。
-> 真實 LLM、SQLite 儲存與金鑰加密、語音管線（GPT-SoVITS TTS / STT）、長期記憶與 Live2D 渲染均未實作。下列產品願景與路線圖不代表已完成功能。
+> 本倉庫目前是**第三版前端（AnimaVox 文字對話版）與帳號、對話保管已接好的後端（模型仍為 Mock）**（見下方[快速開始](#-快速開始-quick-start)）。接口約定見 [接口約定-v1.md](接口約定-v1.md)。第三版前端的說明見 [frontend/README.md](frontend/README.md)。
+> 真實 LLM、寄信服務、金鑰加密、語音管線（GPT-SoVITS TTS / STT）、長期記憶與 Live2D 渲染均未實作。下列產品願景與路線圖不代表已完成功能。
 > 歡迎透過 Issue 參與討論，或見下方[招募段落](#-招募同伴我們正在尋找開發夥伴-we-are-hiring)。
 >
 > **版本說明**：第一版為最初版本；第二版為以 Live2D 開源專案製作的引導版，已由第三版取代（加上 Codex 修正的存檔在 `feature/v2-codex-fixes`）；第三版為 AnimaVox 文字對話版，也就是目前的 `main`（本文件所描述）。
@@ -156,7 +156,7 @@ Phase 1 只做**文字對話版**，其餘全部移至 Phase 2：
 
 > 以下为第三版前端（AnimaVox 文字对话版）。前端的完整说明见 [frontend/README.md](frontend/README.md)。
 
-**环境要求**：Node.js ≥ 20、npm ≥ 10。
+**环境要求**：Node.js ≥ 22.13（只跑前端的话 ≥ 20 即可）、npm ≥ 10。
 
 ```bash
 npm install
@@ -175,26 +175,22 @@ npm run dev:frontend
 - **角色**：李佳尹、羽澄糯为官方角色，人设、模型、形象锁定不可修改；使用者自建角色（自带人设、API、Live2D）为开源引擎功能，即将开放。
 - **界面语言**：「设置」里切换简体中文 / 繁體中文 / English，只影响界面文字，角色台词与聊天内容不转换。
 
-### 接入真实后端
+### 接入后端（帐号 + 后端保管对话）
 
-复制 `frontend/.env.example` 为 `frontend/.env.local`：
+接口的完整约定见 [接口约定-v1.md](接口约定-v1.md)。复制 `frontend/.env.example` 为 `frontend/.env.local`，改成：
 
 | 变量 | 取值 | 说明 |
 | --- | --- | --- |
-| `VITE_CHAT_TRANSPORT` | `mock`（默认）/ `http` | `mock` = 浏览器内假后端；`http` = 自家后端 |
-| `VITE_API_URL` | 默认 `http://localhost:3001` | 后端地址，只在 `http` 模式使用 |
+| `VITE_CHAT_TRANSPORT` | `mock`（默认）/ `http` | `mock` = 浏览器内假后端，不需要帐号；`http` = 自家后端，要先注册登录 |
+| `VITE_API_URL` | 默认 `http://localhost:3001` | 后端地址，只在 `http` 模式使用；正式部署同网域时留空 |
 
-然后 `npm run dev`（同时启动前端与后端）。前后端只通过 `packages/shared` 的 Zod 契约沟通：前端调用 `POST /api/chat`，**不发送 System Prompt、不持有任何 API Key**，人设与模型由后端决定。
+然后 `npm run dev`（同时启动前端与后端，后端需要 **Node.js ≥ 22.13**）。
 
-后端（进程环境变量）：
+- **帐号**：邮箱 + 密码 + 邮箱验证码，需要设定用户名（佳尹与阿糯用它称呼你）。注册时要把说明滑到底，再选择是否同意对话用于训练本地模型；之后只能撤回，不能再开启。开发环境还没接寄信服务，验证码会直接显示在注册页（`devCode`）并印在后端日志。
+- **对话记录**：由后端保管（SQLite，默认 `backend/data/animavox.db`，不进 Git）。前端只送新的一句，并带 `characterId` 与 `clientMessageId`（重送不会重复写入）。
+- **安全**：前端**不发送 System Prompt、不持有任何 API Key**，人设与模型由后端决定。
 
-| 变量 | 默认值 | 说明 |
-| --- | --- | --- |
-| `PORT` | `3001` | 监听端口 |
-| `HOST` | `0.0.0.0` | 监听地址 |
-| `NODE_ENV` | `development` | 决定日志格式 |
-| `LLM_MODE` | `mock` | 当前只有 `mock`；`live` 尚未实现，仍走 mock |
-| `CORS_ORIGIN` | `http://localhost:5173` | 允许的前端来源，多个用逗号分隔 |
+后端环境变量见 [接口约定-v1.md 第八节](接口约定-v1.md#八后端环境变量)。
 
 ### 常用命令
 
@@ -215,17 +211,18 @@ E2E 覆盖 Chrome 的 1280×720、1920×1080、2560×1440 三个分辨率。
 
 ```
 Web chat/
-├── packages/shared/          # 前后端共享的 Zod schema 与类型（LLM 契约、会话、消息）
+├── packages/shared/          # 前后端共享的 Zod 契约（接口、会话、消息）与演示回复
 ├── frontend/                 # React 18 + Vite + Tailwind（详见 frontend/README.md）
 │   ├── e2e/                  # Playwright 端到端测试
 │   └── src/
 │       ├── components/       # nav / overlay / sidebar / chat / live2d / common
 │       ├── config/           # 角色注册表、通道与后端地址
 │       ├── i18n/             # 界面语言（简体 / 繁體 / English）
-│       ├── services/chat/    # ChatTransport：假后端与真实后端
-│       ├── stores/           # Zustand：对话 / 当前角色 / 界面语言
+│       ├── services/         # chat（假后端）/ api（接口客户端）/ backend（本地或远端）
+│       ├── stores/           # Zustand：帐号 / 对话 / 当前角色 / 界面语言
 │       └── db/               # Dexie(IndexedDB) schema 与仓储
-├── backend/                  # Fastify（当前为 Mock 适配器）
+├── backend/                  # Fastify + SQLite（帐号、对话、额度；模型为 Mock）
+│   └── migrations/           # 数据库结构变更（只新增，不改旧的）
 └── playwright.config.ts      # E2E 配置（三个分辨率）
 ```
 

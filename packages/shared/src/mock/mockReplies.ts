@@ -1,8 +1,8 @@
-import type { LLMResponse } from '@shared';
-import { DEFAULT_CHARACTER_ID } from '../../config/characters';
+import type { LLMResponse } from '../schemas/llm';
 
 /**
- * 假后端的台词表（仅供体验界面，正式回复由后端的 LLM 生成）。
+ * 演示用台词表（仅供体验界面，正式回复由后端的 LLM 生成）。
+ * 前端的浏览器内演示回复与后端的 Mock 适配器共用这一份，两边回的话一致。
  * 每条都是完整的结构化 JSON：emotion / action / expression / text / tool_calls，
  * 字段取值都在 项目规格说明书 3.3 的枚举表内。
  * 关键词同时接受简体与繁体输入。
@@ -118,7 +118,26 @@ const SCRIPTS: Record<string, MockScript> = {
 
 /** 没有专属台词的角色使用李佳尹的台词表 */
 export function getMockScript(characterId: string | undefined): MockScript {
-  return SCRIPTS[characterId ?? DEFAULT_CHARACTER_ID] ?? JIAYIN;
+  return (characterId ? SCRIPTS[characterId] : undefined) ?? JIAYIN;
+}
+
+/** 稳定哈希：同一句话永远拿到同一条兜底回复，方便复现 */
+function stableHash(text: string): number {
+  let hash = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    hash = (hash * 31 + text.charCodeAt(index)) % 1_000_000_007;
+  }
+  return hash;
+}
+
+/** 按角色与用户这句话挑一条演示回复（返回副本，调用方可以放心修改） */
+export function pickMockReply(characterId: string | undefined, userText: string): LLMResponse {
+  const { rules, fallbacks } = getMockScript(characterId);
+  const rule = rules.find((item) => item.pattern.test(userText));
+  const picked = rule
+    ? rule.reply
+    : (fallbacks[stableHash(userText) % fallbacks.length] ?? fallbacks[0]);
+  return JSON.parse(JSON.stringify(picked)) as LLMResponse;
 }
 
 /** 输入里带这几个字时，假后端会故意返回一次错误，用来查看出错界面 */

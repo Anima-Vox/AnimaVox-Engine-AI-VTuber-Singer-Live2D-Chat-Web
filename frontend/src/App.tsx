@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { AuthScreen } from './components/auth/AuthScreen';
 import { ChatHeader } from './components/chat/ChatHeader';
 import { Composer } from './components/chat/Composer';
 import { MessageList } from './components/chat/MessageList';
@@ -12,7 +13,8 @@ import { PersonaPanel } from './components/sidebar/PersonaPanel';
 import { SettingsPanel } from './components/sidebar/SettingsPanel';
 import { getCharacter, OFFICIAL_CHARACTERS } from './config/characters';
 import { useT } from './i18n';
-import { chatTransport } from './services/chat';
+import { chatBackend } from './services/backend';
+import { useAuthStore } from './stores/authStore';
 import { useCharacterStore } from './stores/characterStore';
 import { useChatStore } from './stores/chatStore';
 import { useLocaleStore } from './stores/localeStore';
@@ -38,6 +40,11 @@ export function App() {
   const restoreLocale = useLocaleStore((state) => state.restore);
   const t = useT();
 
+  // 接后端（http）时要先登录；演示模式不需要帐号
+  const authStatus = useAuthStore((state) => state.status);
+  const restoreAuth = useAuthStore((state) => state.restore);
+  const isSignedIn = authStatus === 'signed-in';
+
   const chat = useChatStore();
   const { openCharacter } = chat;
   const character = getCharacter(activeCharacterId);
@@ -46,19 +53,27 @@ export function App() {
   useEffect(() => {
     void restoreCharacter();
     void restoreLocale();
-  }, [restoreCharacter, restoreLocale]);
+    void restoreAuth();
+  }, [restoreCharacter, restoreLocale, restoreAuth]);
 
   // 让浏览器按语言选字形（繁体用繁中字体）
   useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
 
-  // 角色确定（或切换）后，读出这个角色的历史对话
+  // 角色确定（或切换）、登录之后，读出这个角色的历史对话
   useEffect(() => {
-    if (isRestored) {
+    if (isRestored && isSignedIn) {
       void openCharacter(activeCharacterId);
     }
-  }, [isRestored, activeCharacterId, openCharacter]);
+  }, [isRestored, isSignedIn, activeCharacterId, openCharacter]);
+
+  // 登出后关掉二级页面，下次登录回到主页
+  useEffect(() => {
+    if (!isSignedIn) {
+      setPanel(null);
+    }
+  }, [isSignedIn]);
 
   // 二级页面开着时，模糊层下的主页点不到、Tab 也走不进去，读屏软件也跳过
   useEffect(() => {
@@ -85,6 +100,10 @@ export function App() {
     setPanel('conversations');
   }
 
+  if (!isSignedIn) {
+    return <AuthScreen status={authStatus} />;
+  }
+
   return (
     <div className="h-full">
       <NavRail ref={navRef} active={panel} onSelect={setPanel} />
@@ -94,7 +113,7 @@ export function App() {
         ref={mainRef}
         className="mx-auto flex h-full w-full min-w-0 flex-col pl-[var(--nav-peek)] min-[800px]:w-[60vw] min-[800px]:pl-0"
       >
-        <ChatHeader character={character} title={activeTitle} mode={chatTransport.mode} />
+        <ChatHeader character={character} title={activeTitle} mode={chatBackend.mode} />
         {/* 消息区：Live2D 预留位置在后（z-0），消息在前（z-10） */}
         <div className="relative flex min-h-0 flex-1 flex-col">
           <Live2DSlot />

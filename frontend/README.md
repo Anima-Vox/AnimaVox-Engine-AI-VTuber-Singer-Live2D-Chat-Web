@@ -1,7 +1,7 @@
 # 前端：AnimaVox 第三版（文字对话版）
 
 AnimaVox（心音）引擎的 Web 前端。这一版只做文字对话：语音、Live2D 渲染、自定义角色都还没接入，但位置与接口都已预留。
-后端还没接上之前，默认用**浏览器内的假后端**回复，打开就能聊。
+默认用**浏览器内的假后端**回复，打开就能聊、不需要帐号；切到 `http` 模式就走自家后端（要先注册登录，对话由后端保管）。
 
 > **版本**：第一版为最初版本；第二版为以 Live2D 开源项目制作的引导版，已由第三版取代（加上 Codex 修正的存档在 `feature/v2-codex-fixes`）；第三版就是这里，也就是目前的 `main`。
 
@@ -53,35 +53,35 @@ npm run dev:frontend
 
 复制 `frontend/.env.example` 为 `frontend/.env.local`，修改：
 
-| 变量                  | 取值                         | 作用                                       |
-| --------------------- | ---------------------------- | ------------------------------------------ |
-| `VITE_CHAT_TRANSPORT` | `mock`（默认）/ `http`       | `mock` = 浏览器内假后端；`http` = 自家后端 |
-| `VITE_API_URL`        | 默认 `http://localhost:3001` | 后端地址，只在 `http` 模式使用             |
+| 变量                  | 取值                         | 作用                                                         |
+| --------------------- | ---------------------------- | ------------------------------------------------------------ |
+| `VITE_CHAT_TRANSPORT` | `mock`（默认）/ `http`       | `mock` = 浏览器内假后端，不需要帐号；`http` = 自家后端，要登录 |
+| `VITE_API_URL`        | 默认 `http://localhost:3001` | 后端地址，只在 `http` 模式使用；正式部署同网域时留空         |
 
-切到 `http` 后用 `npm run dev`（同时启动前后端）。修改 `.env.local` 后要重启 dev server。
+切到 `http` 后用 `npm run dev`（同时启动前后端，需要 Node.js ≥ 22.13）。修改 `.env.local` 后要重启 dev server。
 
-假后端的小技巧：发送「模拟错误」会故意返回一次服务器错误，可以查看出错提示与重试按钮。
+- **假后端**：对话存在浏览器的 IndexedDB（库名 `lijiaying-chat`）。
+- **自家后端**：打开先看到登录 / 注册页。开发环境还没接寄信服务，按「发送验证码」后验证码会直接显示在页面上。注册说明必须滑到底才能选择是否同意训练；「设置」里可以改用户名、撤回训练同意、登出、删除帐号。
+
+两种模式都可以发送「模拟错误」，故意让模型失败一次，查看出错提示与重试按钮。
 
 ## 和后端的约定
 
-前后端只通过 `packages/shared` 里的 Zod 契约沟通，前端不持有任何 API Key。
+完整约定见仓库根目录的 [`接口约定-v1.md`](../接口约定-v1.md)，Zod schema 在 `packages/shared/src/schemas/api.ts`。重点：
 
-- **请求** `POST /api/chat`（`ChatRequestSchema`）：
-  - `conversationId`
-  - `characterId`：`lijiaying` / `yuchengnuo`，后端据此选择人设（可选字段，旧版前端不传）
-  - `modelConfigId`：官方角色固定传 `official`，由后端决定实际模型
-  - `messages`：最近 20 条 user / assistant 文字。**前端不发送 System Prompt**，人格由后端持有并锁定。
-- **响应**（`ChatResponseSchema`）：`response` 为完整结构化 JSON `{ emotion, action, expression, text, tool_calls }`。
-  前端把整份 JSON 存进 IndexedDB（库名 `lijiaying-chat`）；界面目前只显示 `text`，其余字段留给 Live2D 与语音。
-- **错误**：后端返回 `{ error, message }` 时，`message` 会直接显示在界面上。
-- 之后要做 SSE 流式回复，只需在 `src/services/chat/types.ts` 的 `ChatTransport` 里加一个方法，界面层不用动。
+- 对话记录由后端保管，`POST /api/chat` 只送新的一句：`{ conversationId, characterId, clientMessageId, content }`。
+- `clientMessageId` 就是这条用户消息的 id；按「重试」时用同一个 id 重送，后端不会重复写入。
+- **前端不发送 System Prompt、不持有任何 API Key**，人格与模型由后端决定。
+- 回复的 `response` 为 `{ emotion, action, expression, text }`；界面目前只显示 `text`，其余字段留给 Live2D 与语音。
+- 错误固定五种：`API_ERROR`、`MODEL_UNAVAILABLE`、`SERVICE_UNSTABLE`、`QUOTA_EXCEEDED`、`UNAUTHORIZED`，前端按语言显示对应提示。
+- 之后做流式回复时，只需在 `src/services/backend/remote.ts` 加一个方法，界面层不用动。
 
 ## 对话与本地记录的一致性
 
 - 同一时间只等一个回复；一次发送还在处理时，再按发送或重试都不会发出第二条。
 - 切换对话或角色时，会取消正在等的请求；迟到的回复不会显示在别的对话里。
 - 写入消息与删除对话用同一个事务：对话被删除后，迟到的回复不会再写回本地。
-- 写入本地失败时（例如浏览器存储已满），会提示这句话没有发出去，请重新发送。
+- 写入本地失败时（例如浏览器存储已满），会提示这句话没有发出去，请重新发送（只在假后端模式）。
 
 ## 预留给 Phase 2 的位置
 
@@ -99,20 +99,20 @@ src/
 ├── config/
 │   ├── app.ts                   通道、后端地址、超时、上下文条数
 │   └── characters.ts            角色注册表（官方 / 自定义、开场白、建议话题）
-├── services/chat/
-│   ├── types.ts                 ChatTransport 接口（前后端唯一的接缝）
-│   ├── httpTransport.ts         真实后端
-│   ├── mockTransport.ts         假后端
-│   ├── mockReplies.ts           假后端台词表（按角色）
-│   └── errors.ts                错误分类与中文提示
+├── services/
+│   ├── backend/                 ChatBackend 接口：local（假后端 + IndexedDB）/ remote（自家后端）
+│   ├── api/                     接口客户端（带登录 token、错误转换）
+│   └── chat/                    假后端与错误分类（台词表在 packages/shared/src/mock/mockReplies.ts）
 ├── i18n/                        界面语言：locales.ts + messages/（zh-CN、zh-TW、en）
 ├── stores/
+│   ├── authStore.ts             帐号：登录 / 注册 / 登出 / 改名 / 撤回同意 / 删除帐号
 │   ├── chatStore.ts             对话：历史列表 / 新对话 / 切换 / 删除 / 发送 / 重试 / 停止
 │   ├── characterStore.ts        当前角色（记在本地）
 │   └── localeStore.ts           界面语言（记在本地）
 ├── db/                          IndexedDB（会话、消息、设置）
 ├── assets/brand/                AnimaVox LOGO（左上角，文字已转曲线）
 └── components/
+    ├── auth/                    登录 / 注册页、必须滑到底的注册说明
     ├── nav/                     最左侧工具栏（平时收起，鼠标靠近才滑出）
     ├── overlay/                 二级页面外框（模糊背景、✕ / Esc 关闭、焦点管理）
     ├── sidebar/                 二级页面的内容：对话记录、角色、人设、API、设置
@@ -127,7 +127,7 @@ src/
 | -------------------------- | ---------------------------------- | ------------------------------------------- |
 | 开场白、建议话题、简介     | `src/config/characters.ts`         | 对应角色的 `greeting`、`suggestions`、`tagline` |
 | 头像上的字                 | `src/config/characters.ts`         | `monogram`                                  |
-| 假后端的回复内容           | `src/services/chat/mockReplies.ts` | 每条的文字；`pattern` 是触发关键词          |
+| 假后端的回复内容           | `packages/shared/src/mock/mockReplies.ts` | 每条的文字；`pattern` 是触发关键词          |
 | 工具栏的宽度、窄条、感应范围、动画 | `src/styles/index.css`     | `:root` 里的 `--nav-*` 变量                 |
 | 收起前的延迟               | `src/components/nav/NavRail.tsx`   | `NAV_COLLAPSE_DELAY_MS`                     |
 | 二级页面的尺寸             | `src/styles/index.css`             | `.overlay-page`                             |

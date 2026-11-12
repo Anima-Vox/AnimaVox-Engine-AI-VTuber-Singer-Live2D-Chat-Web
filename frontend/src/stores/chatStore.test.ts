@@ -4,7 +4,9 @@ import { ChatDatabase } from '../db';
 import { listMessages } from '../db/repositories/messageRepository';
 import { ChatTransportError, type ChatTransport } from '../services/chat';
 import { createMockTransport } from '../services/chat/mockTransport';
-import { buildContext, createChatStore } from './chatStore';
+import { createLocalBackend } from '../services/backend';
+import { buildContext } from '../utils/context';
+import { createChatStore } from './chatStore';
 
 let database: ChatDatabase;
 
@@ -65,7 +67,7 @@ function lateTransport() {
 }
 
 async function openStore(transport: ChatTransport = instantTransport(), characterId = 'lijiaying') {
-  const store = createChatStore({ transport, database });
+  const store = createChatStore({ backend: createLocalBackend({ transport, database }) });
   await store.getState().openCharacter(characterId);
   return store;
 }

@@ -7,12 +7,10 @@ export interface SendOptions {
 }
 
 /**
- * 对话通道：前端与「后端」之间唯一的接口。
+ * 演示模式的回复来源：浏览器内假后端（services/backend/local.ts 用它产生回复）。
  *
  * 请求与响应都使用 packages/shared 里的 Zod 契约（ChatRequest / ChatResponse），
- * 所以把 mock 换成真实后端时，界面与状态层一行都不用改。
- *
- * 之后接 SSE 流式回复（立项文件 M1.4）时，在这里新增一个可选的 stream 方法即可。
+ * 接真实后端时走 services/backend/remote.ts（接口约定 v1），不经过这里。
  */
 export interface ChatTransport {
   readonly mode: ChatTransportMode;

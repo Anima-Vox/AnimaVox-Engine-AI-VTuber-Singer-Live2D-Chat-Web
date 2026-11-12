@@ -14,8 +14,8 @@ export function ChatNotice({ notice, onRetry, onDismiss }: ChatNoticeProps) {
   const isError = notice.kind === 'error';
   const text =
     notice.reason === 'http' ? t.server(notice.status, notice.detail) : t.reasons[notice.reason];
-  // 保存失败时重试也没用，只留「关闭」
-  const canRetry = notice.reason !== 'save';
+  // 保存失败、额度用完、登录过期时重试也没用，只留「关闭」
+  const canRetry = !['save', 'quota_exceeded', 'unauthorized'].includes(notice.reason);
 
   return (
     <div

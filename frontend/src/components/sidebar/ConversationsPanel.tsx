@@ -1,6 +1,6 @@
 import clsx from 'clsx';
 import { useEffect, useState } from 'react';
-import type { Conversation } from '@shared';
+import type { Conversation } from '../../types';
 import type { CharacterProfile } from '../../config/characters';
 import { useT } from '../../i18n';
 import { formatSidebarTime } from '../../utils/time';

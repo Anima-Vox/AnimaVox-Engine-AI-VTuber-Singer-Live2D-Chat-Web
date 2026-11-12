@@ -20,10 +20,8 @@
 ---
 
 > **⚠️ 開發階段聲明**
-> **這是純淨版**：已移除 `backend/` 與 HTTP 接口，只保留前端與瀏覽器內的演示回覆。接上自己的接口請看 [純淨版說明](纯净版说明.md)。
->
-> 本倉庫目前是**第三版前端（AnimaVox 文字對話版）與最小 Mock 後端**（見下方[快速開始](#-快速開始-quick-start)）。正式後端尚未開工；`backend/` 僅供前端開發與測試。第三版前端的說明見 [frontend/README.md](frontend/README.md)。
-> 真實 LLM、SQLite 儲存與金鑰加密、語音管線（GPT-SoVITS TTS / STT）、長期記憶與 Live2D 渲染均未實作。下列產品願景與路線圖不代表已完成功能。
+> **這是純淨版**：只有第三版前端（AnimaVox 文字對話版）與瀏覽器內的演示回覆，**沒有後端，也沒有任何後端接口**；怎麼接後端完全交給後端決定。說明見 [純淨版說明](纯净版说明.md) 與 [frontend/README.md](frontend/README.md)。
+> 真實 LLM、後端儲存、語音管線（GPT-SoVITS TTS / STT）、長期記憶與 Live2D 渲染均未實作。下列產品願景與路線圖不代表已完成功能。
 > 歡迎透過 Issue 參與討論，或見下方[招募段落](#-招募同伴我們正在尋找開發夥伴-we-are-hiring)。
 >
 > **版本說明**：第一版為最初版本；第二版為以 Live2D 開源專案製作的引導版，已由第三版取代（加上 Codex 修正的存檔在 `feature/v2-codex-fixes`）；第三版為 AnimaVox 文字對話版，也就是目前的 `main`（本文件所描述）。
@@ -101,7 +99,7 @@ Phase 1 只做**文字對話版**，其餘全部移至 Phase 2：
 }
 ```
 
-**以下三組列舉值為前端、後端、Live2D 模型與語音語料的唯一來源，任一方新增或修改時需四方同步。** 程式碼中的唯一來源為 [`packages/shared/src/constants.ts`](packages/shared/src/constants.ts)。
+**以下三組列舉值為前端、後端、Live2D 模型與語音語料的唯一來源，任一方新增或修改時需四方同步。**
 
 #### `emotion` — 情緒（7 種）
 
@@ -132,7 +130,7 @@ Phase 1 只做**文字對話版**，其餘全部移至 Phase 2：
 ### 🛡️ 核心特性
 
 1.  **雙層架構 (Two-Layer Design)**：開源引擎供任何人自備 Key 使用；李佳尹官方實例 100% 運行於官方 API，確保角色一致性與品質。
-2.  **本機儲存 (Local-First，已實作)**：聊天紀錄保存在瀏覽器 `IndexedDB`。發送時會把最近的對話傳給所連接的後端（預設是瀏覽器內的假後端）；尚無 SQLite 備份。
+2.  **本機儲存 (Local-First，已實作)**：聊天紀錄只保存在瀏覽器 `IndexedDB`，不會離開瀏覽器。
 3.  **語音可選 (Voice as Optional Layer)**：TTS / STT 為可插拔模組，任一失效不影響文字對話。李佳尹官方版使用專屬訓練音色。
 4.  **Live2D 沉浸渲染（規劃，Phase 2）**：第三版已在對話欄中間預留 Live2D 位置（透明、無框）；之後整合 Live2D，由 AI 返回的 `emotion` 欄位驅動模型表情聯動，口型同步同樣在 Phase 2。
 5.  **多模型自由切換**：相容 OpenAI API 格式（引擎預設 **DeepSeek V4 Pro**，模型 ID `deepseek-v4-pro`），支援在設定頁配置多組 API URL/Key，一鍵切換不掉上下文。
@@ -144,8 +142,6 @@ Phase 1 只做**文字對話版**，其餘全部移至 Phase 2：
 
 **已實作（本分支可運行）**
 *   **Frontend**: React 18 + Vite + TypeScript + Tailwind CSS + Zustand + Dexie.js (IndexedDB)（Live2D 位置已預留，渲染器於 Phase 2 接入）
-*   **Mock 後端**: Node.js + Fastify + TypeScript（健康檢查與 Mock 對話；正式後端未開工）
-*   **Shared**: Zod（前後端共用 schema，位於 `packages/shared`）
 *   **測試**: Vitest（單元測試）+ Playwright（E2E，1280×720 / 1920×1080 / 2560×1440）
 
 **規劃導入**
@@ -156,16 +152,16 @@ Phase 1 只做**文字對話版**，其餘全部移至 Phase 2：
 
 ## 🚀 快速開始 (Quick Start)
 
-> 以下为第三版前端（AnimaVox 文字对话版）。前端的完整说明见 [frontend/README.md](frontend/README.md)。
+> 以下为第三版（AnimaVox 文字对话版）的**纯净版**：只有前端。说明见 [纯净版说明](纯净版说明.md) 与 [frontend/README.md](frontend/README.md)。
 
 **环境要求**：Node.js ≥ 20、npm ≥ 10。
 
 ```bash
 npm install
-npm run dev:frontend
+npm run dev
 ```
 
-浏览器打开 <http://localhost:5173> 就能直接聊天：默认使用**浏览器内的假后端**，不需要任何 API Key，也不需要启动后端。
+浏览器打开 <http://localhost:5173> 就能直接聊天：回复来自浏览器里的演示台词，不需要帐号、不需要任何 API Key，也没有后端。发送「模拟错误」可以查看出错提示与重试。
 
 ### 界面
 
@@ -173,71 +169,58 @@ npm run dev:frontend
 
 - **工具栏**：平时收起在屏幕最左边，只露出一条窄条；鼠标靠近、键盘 Tab 或触控点窄条就滑出。
 - **二级页面**：工具栏的对话、角色、人设、API、设置都打开盖在主页上的二级页面，主页在后面模糊柔焦；按 ✕ 或 Esc 关闭。
-
 - **角色**：李佳尹、羽澄糯为官方角色，人设、模型、形象锁定不可修改；使用者自建角色（自带人设、API、Live2D）为开源引擎功能，即将开放。
 - **界面语言**：「设置」里切换简体中文 / 繁體中文 / English，只影响界面文字，角色台词与聊天内容不转换。
-
-### 接入自己的接口
-
-纯净版没有后端，也没有 HTTP 接口。接法见 [纯净版说明](纯净版说明.md)。
 
 ### 常用命令
 
 ```bash
-npm run dev:frontend # 只启动前端（假后端，5173）
-npm run dev          # 同 dev:frontend（纯净版没有后端）
-npm run build        # 构建前端，产物在 frontend/dist
-npm run typecheck    # 全项目 TS 严格模式检查
+npm run dev          # 启动前端（5173）
+npm run build        # 打包前端，产物在 frontend/dist
+npm run typecheck    # TypeScript 检查
 npm run lint         # ESLint
-npm run test         # Vitest 单元测试
-npm run test:e2e     # Playwright 端到端测试（需先启动前端）
+npm run test         # 单元测试
+npm run test:e2e     # 端到端测试（真的浏览器；前端没在运行时会自动启动）
 npm run format       # Prettier 格式化
 ```
 
-E2E 覆盖 Chrome 的 1280×720、1920×1080、2560×1440 三个分辨率。
+端到端测试覆盖 Chrome 的 1280×720、1920×1080、2560×1440 三个分辨率；第一次运行前先执行 `npx playwright install chromium`。
 
 ### 目录结构
 
 ```
-Web chat/
-├── packages/shared/          # 前后端共享的 Zod schema 与类型（LLM 契约、会话、消息）
-├── frontend/                 # React 18 + Vite + Tailwind（详见 frontend/README.md）
-│   ├── e2e/                  # Playwright 端到端测试
+├── 纯净版说明.md             # 这个版本有什么、之后接后端要改哪里
+├── frontend/                 # 前端：React 18 + Vite + Tailwind（详见 frontend/README.md）
+│   ├── e2e/                  # 端到端测试
 │   └── src/
+│       ├── App.tsx           # 主页布局与二级页面切换
+│       ├── types.ts          # 对话、消息、角色回复的资料格式
 │       ├── components/       # nav / overlay / sidebar / chat / live2d / common
-│       ├── config/           # 角色注册表、通道与后端地址
+│       ├── config/           # 角色注册表
 │       ├── i18n/             # 界面语言（简体 / 繁體 / English）
-│       ├── services/chat/    # ChatTransport：假后端与真实后端
-│       ├── stores/           # Zustand：对话 / 当前角色 / 界面语言
-│       └── db/               # Dexie(IndexedDB) schema 与仓储
-└── playwright.config.ts      # E2E 配置（三个分辨率）
+│       ├── services/         # 角色的回复从哪里来（目前是演示台词）
+│       ├── stores/           # 状态：对话 / 目前的角色 / 界面语言
+│       └── db/               # 浏览器里的数据库（IndexedDB）
+└── playwright.config.ts      # 端到端测试设定
 ```
-
-### 后端接手边界
-
-- 前端只通过 `frontend/src/services/chat/` 的 `ChatTransport` 与后端沟通，请求与响应的 Zod 契约在 `packages/shared/src/schemas/`（`POST /api/chat`）。详细约定见 [frontend/README.md](frontend/README.md)「和后端的约定」。
-- 前端不持有 API Key、不发送 System Prompt：`characterId` 交给后端选择人设，`modelConfigId` 固定传 `official`，由后端决定实际模型。当前 Mock 后端还没有使用 `characterId`。
-- 当前只有健康检查与 Mock 对话，没有真实模型、会话同步或记忆服务。开始正式后端前，先共同确定人设与模型由谁持有、上下文由谁维护及其版本、消息 ID / 幂等规则和错误契约。
 
 ### 数据与隐私
 
-- 聊天记录保存在本机浏览器的 IndexedDB（`lijiaying-chat`），角色回复以完整 JSON 保存（`emotion` / `action` / `expression` / `text` / `tool_calls`），界面目前只显示文字。
-- 发送时会把最近 20 条对话文字传给所连接的后端。默认的假后端在浏览器里运行，内容不会离开浏览器；当前后端也只返回 Mock，不调用第三方 LLM。
-- 前端不持有、不保存任何 API Key。
+- 聊天记录只保存在本机浏览器的 IndexedDB（`lijiaying-chat`），不会离开浏览器；角色的回复连同 `emotion` / `action` / `expression` 一起保存，界面目前只显示文字。
+- 没有帐号，前端不持有、不保存任何 API Key。
 
 ### Roadmap
 
 **已完成（Phase 1 前端 · 第三版：AnimaVox 文字对话版）**
 
 - AnimaVox 界面（置中的对话栏、自动收起的左侧工具栏、盖在主页上的二级页面、Live2D 预留位置）、官方角色锁定、每个角色独立的历史对话（新建 / 切换 / 删除）
-- 假后端 / 真实后端一键切换，前后端共用 Zod 契约
 - 界面三语（简体 / 繁體 / English）
-- 切换或删除对话时取消正在等的请求；迟到的回复不会显示在别的对话，也不会写回已删除的对话；连按两次只发一次；写入本地失败时提示
-- 单测（Vitest）、E2E（Playwright，三个分辨率）
+- 切换或删除对话时取消正在等的回复；迟到的回复不会显示在别的对话，也不会写回已删除的对话；连按两次只发一次；存进浏览器失败时提示
+- 单元测试（Vitest）、端到端测试（Playwright，三个分辨率）
 
 **待接入**
 
-- Phase 1：正式后端（盲测选定的 LLM、SQLite，当前后端只有 Mock 适配器）、SSE 流式回复、内容安全、部署与邀请制内测
+- Phase 1：后端与真实 LLM（接口由后端决定）、内容安全、部署与邀请制内测
 - Phase 2：Live2D 渲染、TTS 语音合成 / ASR 语音输入 / 口型同步、长期记忆、使用者自建角色（人设、API、Live2D）、英文用户的对话翻译模组、Function Calling
 - Docker 部署与 CI
 

@@ -4,7 +4,7 @@ import { en } from './messages/en';
 import { zhCN, type Messages } from './messages/zh-CN';
 import { zhTW } from './messages/zh-TW';
 
-export const MESSAGES: Record<Locale, Messages> = { 'zh-CN': zhCN, 'zh-TW': zhTW, en };
+const MESSAGES: Record<Locale, Messages> = { 'zh-CN': zhCN, 'zh-TW': zhTW, en };
 
 /** 当前界面语言的文字：const t = useT(); t.chat.send */
 export function useT(): Messages {

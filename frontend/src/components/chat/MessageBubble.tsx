@@ -1,4 +1,4 @@
-import type { Message } from '@shared';
+import type { Message } from '../../types';
 import type { CharacterProfile } from '../../config/characters';
 import { useT } from '../../i18n';
 import { formatMessageTime } from '../../utils/time';

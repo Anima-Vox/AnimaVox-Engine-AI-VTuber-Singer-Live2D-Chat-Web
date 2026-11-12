@@ -43,8 +43,6 @@ export const zhTW: Messages = {
     title: '模型與 API',
     locked: (character) => `${character.name}固定使用官方模型與 API，不需要也不能填寫自己的 Key。`,
     customSoon: '自定義 API 設置即將開放。',
-    channel: '對話通道',
-    channels: { mock: '演示（瀏覽器內假後端）', http: '自家後端' },
     customNote: '使用者自己創建的角色可以接入自己的模型與 API（開源引擎功能，即將開放）。',
   },
   settings: {
@@ -58,7 +56,7 @@ export const zhTW: Messages = {
     versionValue: '文字對話版 0.2',
   },
   chat: {
-    demoBadge: '演示模式：回覆來自假後端',
+    demoBadge: '演示模式：回覆來自演示台詞',
     you: '你說',
     says: (character) => `${character.shortName}說`,
     typing: (character) => `${character.shortName}正在輸入`,
@@ -73,16 +71,11 @@ export const zhTW: Messages = {
     failed: (reason) => `沒有收到回覆。${reason}`,
     retry: '重試',
     close: '關閉',
-    server: (status, detail) =>
-      `服務器返回錯誤${status ? `（${status}）` : ''}${detail ? `：${detail}` : '。'}`,
     reasons: {
       unanswered: '這條消息還沒有收到回覆。',
       history: '讀取本地聊天記錄失敗，新的消息仍可以正常發送。',
       aborted: '已停止等待回覆。',
-      timeout: '等了太久沒有回應，請稍後再試。',
-      network: '連不上服務器，請檢查網絡或確認後端已經啟動。',
-      invalid_response: '服務器返回的數據格式不對，請聯繫後端檢查。',
-      unknown: '出了點意外，請再試一次。',
+      failed: '出了點意外，請再試一次。',
       save: '這句話沒能保存到瀏覽器，所以沒有發出去，請再發一次。',
     },
   },

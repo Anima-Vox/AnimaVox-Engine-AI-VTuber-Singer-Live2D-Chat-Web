@@ -6,7 +6,6 @@
   "description": "基于 Live2D 的 AI 虚拟角色 Web 聊天应用 | AI Virtual Character Chat with Live2D",
   "license": "AGPL-3.0",
   "workspaces": [
-    "packages/*",
     "frontend"
   ],
   "engines": {
@@ -14,9 +13,8 @@
   },
   "scripts": {
     "dev": "npm run dev -w frontend",
-    "dev:frontend": "npm run dev -w frontend",
     "build": "npm run build -w frontend",
-    "typecheck": "npm run typecheck -w @ai-live2d/shared && npm run typecheck -w frontend && tsc --noEmit -p tsconfig.json",
+    "typecheck": "npm run typecheck -w frontend && tsc --noEmit -p tsconfig.json",
     "lint": "npm run lint -w frontend",
     "test": "npm run test -w frontend",
     "test:e2e": "playwright test",

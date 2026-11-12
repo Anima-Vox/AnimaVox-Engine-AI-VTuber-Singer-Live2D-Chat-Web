@@ -1,16 +1,10 @@
-import type { Conversation } from '@shared';
+import type { Conversation } from '../../types';
 import { createId } from '../../utils/id';
-import { nowIso } from '../../utils/time';
 import { db, type ChatDatabase } from '../index';
 
-export const DEFAULT_CONVERSATION_TITLE = '新的会话';
+/** 对话表的读写。每个函数最后一个参数都是数据库，平常不用传；测试时换成独立的数据库 */
 
-/** 按最近更新时间倒序列出全部会话 */
-export async function listConversations(database: ChatDatabase = db): Promise<Conversation[]> {
-  return database.conversations.orderBy('updatedAt').reverse().toArray();
-}
-
-/** 某个角色的全部会话，最近活跃的排最前 */
+/** 某个角色的全部对话，最近更新的排最前 */
 export async function listConversationsByCharacter(
   characterId: string,
   database: ChatDatabase = db,
@@ -22,75 +16,30 @@ export async function listConversationsByCharacter(
   return conversations.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
-export async function getConversation(
-  id: string,
-  database: ChatDatabase = db,
-): Promise<Conversation | undefined> {
-  return database.conversations.get(id);
-}
-
-export async function getLatestConversation(
-  database: ChatDatabase = db,
-): Promise<Conversation | undefined> {
-  const [latest] = await listConversations(database);
-  return latest;
-}
-
-export interface CreateConversationInput {
-  characterId: string;
-  activeModelId: string;
-  title?: string;
-}
-
+/** 建立一段新对话；标题取第一句话的前 24 个字 */
 export async function createConversation(
-  input: CreateConversationInput,
+  characterId: string,
+  firstMessage: string,
   database: ChatDatabase = db,
 ): Promise<Conversation> {
-  const now = nowIso();
+  const now = new Date().toISOString();
   const conversation: Conversation = {
     id: createId(),
-    title: input.title?.trim() || DEFAULT_CONVERSATION_TITLE,
-    characterId: input.characterId,
-    activeModelId: input.activeModelId,
+    title: firstMessage.replace(/\s+/g, ' ').slice(0, 24),
+    characterId,
     createdAt: now,
     updatedAt: now,
   };
-
   await database.conversations.add(conversation);
   return conversation;
 }
 
-export async function renameConversation(
-  id: string,
-  title: string,
-  database: ChatDatabase = db,
-): Promise<void> {
-  await database.conversations.update(id, { title: title.trim() || DEFAULT_CONVERSATION_TITLE });
-}
-
-/** 用首条用户消息生成会话标题（侧栏显示更友好） */
-export async function renameConversationByFirstMessage(
-  id: string,
-  firstMessage: string,
-  database: ChatDatabase = db,
-): Promise<void> {
-  const title = firstMessage.trim().replace(/\s+/g, ' ').slice(0, 24);
-  await renameConversation(id, title, database);
-}
-
+/** 对话有新消息时更新时间（历史列表靠它排序） */
 export async function touchConversation(id: string, database: ChatDatabase = db): Promise<void> {
-  await database.conversations.update(id, { updatedAt: nowIso() });
+  await database.conversations.update(id, { updatedAt: new Date().toISOString() });
 }
 
-export async function setConversationActiveModel(
-  id: string,
-  modelConfigId: string,
-  database: ChatDatabase = db,
-): Promise<void> {
-  await database.conversations.update(id, { activeModelId: modelConfigId, updatedAt: nowIso() });
-}
-
-/** 删除会话并级联删除其消息 */
+/** 删除对话，连同它的全部消息 */
 export async function deleteConversation(id: string, database: ChatDatabase = db): Promise<void> {
   await database.transaction('rw', database.conversations, database.messages, async () => {
     await database.messages.where('conversationId').equals(id).delete();

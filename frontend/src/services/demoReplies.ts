@@ -1,27 +1,21 @@
-import type { LLMResponse } from '@shared';
-import { DEFAULT_CHARACTER_ID } from '../../config/characters';
+import type { CharacterReply } from '../types';
 
 /**
- * 假后端的台词表（仅供体验界面，正式回复由后端的 LLM 生成）。
- * 每条都是完整的结构化 JSON：emotion / action / expression / text / tool_calls，
- * 字段取值都在 项目规格说明书 3.3 的枚举表内。
- * 关键词同时接受简体与繁体输入。
+ * 演示台词表：纯净版没有后端，角色照这里回复（由 reply.ts 使用）。
+ * 每个角色一份：先看用户这句话有没有命中关键词（rules），都没命中就用兜底回复（fallbacks）。
+ * 关键词同时接受简体与繁体；emotion / action / expression 的取值见项目规格说明书 3.3。
  */
 
-interface ReplyRule {
-  pattern: RegExp;
-  reply: LLMResponse;
+interface DemoScript {
+  rules: { pattern: RegExp; reply: CharacterReply }[];
+  fallbacks: CharacterReply[];
 }
 
-export interface MockScript {
-  rules: readonly ReplyRule[];
-  /** 没有命中任何关键词时轮流使用 */
-  fallbacks: readonly [LLMResponse, ...LLMResponse[]];
+function reply(emotion: string, action: string, expression: string, text: string): CharacterReply {
+  return { emotion, action, expression, text };
 }
 
-function reply(emotion: string, action: string, expression: string, text: string): LLMResponse {
-  return { emotion, action, expression, text, tool_calls: [] };
-}
+/* ---------- 两个角色共用的关键词 ---------- */
 
 const GREETING = /(你好|您好|哈喽|哈囉|嗨|hi|hello|在吗|在嗎|早安|晚安|早上好|晚上好)/i;
 const DOWN = /(累|难过|難過|伤心|傷心|不开心|不開心|压力|壓力|烦|煩|emo)/i;
@@ -29,7 +23,9 @@ const PRAISE = /(喜欢你|喜歡你|可爱|可愛|好看|厉害|厲害)/;
 const RUDE = /(讨厌|討厭|笨蛋|滚|滾)/;
 const QUESTION = /(什么|什麼|为什么|為什麼|怎么|怎麼|吗|嗎|？|\?)/;
 
-const JIAYIN: MockScript = {
+/* ---------- 李佳尹 ---------- */
+
+const JIAYIN: DemoScript = {
   rules: [
     {
       pattern: GREETING,
@@ -80,7 +76,9 @@ const JIAYIN: MockScript = {
   ],
 };
 
-const NUO: MockScript = {
+/* ---------- 羽澄糯（阿糯） ---------- */
+
+const NUO: DemoScript = {
   rules: [
     {
       pattern: GREETING,
@@ -111,15 +109,17 @@ const NUO: MockScript = {
   ],
 };
 
-const SCRIPTS: Record<string, MockScript> = {
+const SCRIPTS: Record<string, DemoScript> = {
   lijiaying: JIAYIN,
   yuchengnuo: NUO,
 };
 
-/** 没有专属台词的角色使用李佳尹的台词表 */
-export function getMockScript(characterId: string | undefined): MockScript {
-  return SCRIPTS[characterId ?? DEFAULT_CHARACTER_ID] ?? JIAYIN;
+/** 按角色与用户这句话挑一条回复；同一句话永远拿到同一条。没有专属台词的角色用李佳尹的 */
+export function pickDemoReply(characterId: string, userText: string): CharacterReply {
+  const { rules, fallbacks } = SCRIPTS[characterId] ?? JIAYIN;
+  const rule = rules.find((item) => item.pattern.test(userText));
+  return rule?.reply ?? fallbacks[userText.length % fallbacks.length]!;
 }
 
-/** 输入里带这几个字时，假后端会故意返回一次错误，用来查看出错界面 */
-export const MOCK_ERROR_TRIGGER = /(模拟错误|模擬錯誤)/;
+/** 用户的话里带这几个字时，故意让回复失败，用来查看出错提示与重试 */
+export const DEMO_ERROR_TRIGGER = /(模拟错误|模擬錯誤)/;

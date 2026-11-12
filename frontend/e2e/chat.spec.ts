@@ -1,13 +1,13 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
 /**
- * 文字对话版 E2E（默认的 mock 通道，不需要后端）。
- * 运行：npm run test:e2e
+ * 端到端测试：用真的浏览器操作前端（纯净版没有后端，回复来自浏览器里的演示台词）。
+ * 运行：npm run test:e2e（前端没在运行时会自动启动）。
  */
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
-  // 每个用例从空白的本地数据开始
+  // 每个用例从空白的浏览器资料开始
   await page.evaluate(
     () =>
       new Promise<void>((resolve) => {
@@ -18,6 +18,8 @@ test.beforeEach(async ({ page }) => {
   );
   await page.reload();
 });
+
+/* ---------- 用例里重复用到的动作 ---------- */
 
 /** 在浏览器里读出已保存的界面语言（settings 表） */
 function readSavedLocale(): Promise<string | null> {
@@ -195,10 +197,20 @@ test('界面可以切换成繁体与英文，角色台词不变，刷新后仍�
   await openPage(page, 'Chats', 'Chats with Jayin Li', 'Main menu');
 });
 
-test('服务器出错时显示提示与重试按钮', async ({ page }) => {
+test('没拿到回复时显示提示与重试按钮；重试不会多出一句', async ({ page }) => {
   await say(page, '模拟错误');
   await expect(page.getByRole('alert')).toContainText('没有收到回复');
-  await expect(page.getByRole('button', { name: '重试' })).toBeEnabled();
+
+  // 这句话永远失败：重试后还是同一句、同一个提示
+  await page.getByRole('button', { name: '重试' }).click();
+  await expect(page.getByRole('button', { name: '停止等待回复' })).toHaveCount(0);
+  await expect(page.getByRole('alert')).toContainText('没有收到回复');
+  await expect(page.locator('article[aria-label="你说"]')).toHaveCount(1);
+
+  // 刷新后这句话还在，并提示还没有回复
+  await page.reload();
+  await expect(page.locator('article')).toHaveCount(1);
+  await expect(page.getByRole('status').filter({ hasText: '还没有收到回复' })).toBeVisible();
 });
 
 test.describe('主页布局', () => {

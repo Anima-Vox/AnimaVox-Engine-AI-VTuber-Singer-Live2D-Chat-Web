@@ -47,8 +47,6 @@ export const zhCN = {
     locked: (character: Names) =>
       `${character.name}固定使用官方模型与 API，不需要也不能填写自己的 Key。`,
     customSoon: '自定义 API 设置即将开放。',
-    channel: '对话通道',
-    channels: { mock: '演示（浏览器内假后端）', http: '自家后端' },
     customNote: '使用者自己创建的角色可以接入自己的模型与 API（开源引擎功能，即将开放）。',
   },
   settings: {
@@ -62,7 +60,7 @@ export const zhCN = {
     versionValue: '文字对话版 0.2',
   },
   chat: {
-    demoBadge: '演示模式：回复来自假后端',
+    demoBadge: '演示模式：回复来自演示台词',
     you: '你说',
     says: (character: Names) => `${character.shortName}说`,
     typing: (character: Names) => `${character.shortName}正在输入`,
@@ -77,18 +75,13 @@ export const zhCN = {
     failed: (reason: string) => `没有收到回复。${reason}`,
     retry: '重试',
     close: '关闭',
-    server: (status?: number, detail?: string) =>
-      `服务器返回错误${status ? `（${status}）` : ''}${detail ? `：${detail}` : '。'}`,
     reasons: {
       unanswered: '这条消息还没有收到回复。',
       history: '读取本地聊天记录失败，新的消息仍可以正常发送。',
       aborted: '已停止等待回复。',
-      timeout: '等了太久没有回应，请稍后再试。',
-      network: '连不上服务器，请检查网络或确认后端已经启动。',
-      invalid_response: '服务器返回的数据格式不对，请联系后端检查。',
-      unknown: '出了点意外，请再试一次。',
+      failed: '出了点意外，请再试一次。',
       save: '这句话没能保存到浏览器，所以没有发出去，请再发一次。',
-    } satisfies Record<Exclude<NoticeReason, 'http'>, string>,
+    } satisfies Record<NoticeReason, string>,
   },
 };
 

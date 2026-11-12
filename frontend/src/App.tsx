@@ -12,7 +12,6 @@ import { PersonaPanel } from './components/sidebar/PersonaPanel';
 import { SettingsPanel } from './components/sidebar/SettingsPanel';
 import { getCharacter, OFFICIAL_CHARACTERS } from './config/characters';
 import { useT } from './i18n';
-import { chatTransport } from './services/chat';
 import { useCharacterStore } from './stores/characterStore';
 import { useChatStore } from './stores/chatStore';
 import { useLocaleStore } from './stores/localeStore';
@@ -94,7 +93,7 @@ export function App() {
         ref={mainRef}
         className="mx-auto flex h-full w-full min-w-0 flex-col pl-[var(--nav-peek)] min-[800px]:w-[60vw] min-[800px]:pl-0"
       >
-        <ChatHeader character={character} title={activeTitle} mode={chatTransport.mode} />
+        <ChatHeader character={character} title={activeTitle} />
         {/* 消息区：Live2D 预留位置在后（z-0），消息在前（z-10） */}
         <div className="relative flex min-h-0 flex-1 flex-col">
           <Live2DSlot />

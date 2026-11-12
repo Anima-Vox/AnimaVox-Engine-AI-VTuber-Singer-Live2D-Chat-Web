@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { Message } from '@shared';
+import type { Message } from '../../types';
 import type { CharacterProfile } from '../../config/characters';
 import type { ChatNotice as Notice } from '../../stores/chatStore';
 import { ChatNotice } from './ChatNotice';

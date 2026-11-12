@@ -45,8 +45,6 @@ export const en: Messages = {
     locked: (character) =>
       `${character.englishName} always uses the official model and API. No key is needed, and you can't enter your own.`,
     customSoon: 'Custom API settings coming soon.',
-    channel: 'Chat channel',
-    channels: { mock: 'Demo (in-browser mock backend)', http: 'Own backend' },
     customNote:
       'Characters you create yourself can connect their own model and API (open-source engine feature, coming soon).',
   },
@@ -61,7 +59,7 @@ export const en: Messages = {
     versionValue: 'Text chat 0.2',
   },
   chat: {
-    demoBadge: 'Demo mode: replies come from a mock backend',
+    demoBadge: 'Demo mode: replies come from a built-in script',
     you: 'You said',
     says: (character) => `${character.englishName} said`,
     typing: (character) => `${character.englishName} is typing`,
@@ -76,17 +74,11 @@ export const en: Messages = {
     failed: (reason) => `No reply received. ${reason}`,
     retry: 'Retry',
     close: 'Dismiss',
-    server: (status, detail) =>
-      `Server error${status ? ` (${status})` : ''}${detail ? `: ${detail}` : '.'}`,
     reasons: {
       unanswered: "This message hasn't received a reply yet.",
       history: "Couldn't read the local chat history. You can still send new messages.",
       aborted: 'Stopped waiting for the reply.',
-      timeout: 'No response for too long. Please try again later.',
-      network: "Can't reach the server. Check your network or make sure the backend is running.",
-      invalid_response:
-        'The server returned data in the wrong format. Please ask the backend team to check.',
-      unknown: 'Something went wrong. Please try again.',
+      failed: 'Something went wrong. Please try again.',
       save: "This message couldn't be saved in your browser, so it wasn't sent. Please send it again.",
     },
   },

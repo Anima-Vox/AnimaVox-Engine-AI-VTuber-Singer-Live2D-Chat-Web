@@ -12,10 +12,9 @@ interface ChatNoticeProps {
 export function ChatNotice({ notice, onRetry, onDismiss }: ChatNoticeProps) {
   const t = useT().notice;
   const isError = notice.kind === 'error';
-  const text =
-    notice.reason === 'http' ? t.server(notice.status, notice.detail) : t.reasons[notice.reason];
-  // 保存失败时重试也没用，只留「关闭」
-  const canRetry = notice.reason !== 'save';
+  const text = t.reasons[notice.reason];
+  // 没存进浏览器、或读取记录失败时没有东西可以重试，只留「关闭」
+  const canRetry = notice.reason !== 'save' && notice.reason !== 'history';
 
   return (
     <div

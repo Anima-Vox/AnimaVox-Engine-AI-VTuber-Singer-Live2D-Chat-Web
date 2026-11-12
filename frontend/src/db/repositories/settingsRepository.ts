@@ -1,5 +1,8 @@
 import { db, type ChatDatabase } from '../index';
 
+/** 界面偏好表的读写：每一项是「名字 → 值」 */
+
+/** 目前存了哪些偏好 */
 export const SETTING_KEYS = {
   /** 上次使用的角色 */
   activeCharacterId: 'activeCharacterId',

@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ChatRequest, ChatResponse } from '@shared';
 import { ChatDatabase } from '../db';
 import { listMessages } from '../db/repositories/messageRepository';
-import { ChatTransportError, type ChatTransport } from '../services/chat';
-import { createMockTransport } from '../services/chat/mockTransport';
-import { buildContext, createChatStore } from './chatStore';
+import { pickDemoReply } from '../services/demoReplies';
+import type { ReplyInput } from '../services/reply';
+import { createChatStore } from './chatStore';
 
+/** 每个用例用一个全新的浏览器数据库 */
 let database: ChatDatabase;
 
 beforeEach(async () => {
@@ -17,97 +17,172 @@ afterEach(async () => {
   await database.delete();
 });
 
-function instantTransport(): ChatTransport {
-  return createMockTransport({ delayMs: () => 0 });
-}
-
-/** 记下每次请求，并且第一次失败、之后成功 */
-function flakyTransport(requests: ChatRequest[] = []): ChatTransport {
-  const inner = instantTransport();
-  return {
-    mode: 'mock',
-    async send(request: ChatRequest): Promise<ChatResponse> {
-      requests.push(request);
-      if (requests.length === 1) {
-        throw new ChatTransportError('network');
-      }
-      return inner.send(request);
-    },
-  };
-}
-
-/** 记下每次请求，正常回复 */
-function recordingTransport(requests: ChatRequest[]): ChatTransport {
-  const inner = instantTransport();
-  return {
-    mode: 'mock',
-    async send(request: ChatRequest): Promise<ChatResponse> {
-      requests.push(request);
-      return inner.send(request);
-    },
-  };
-}
-
-/** 等测试调用 release() 才回复，而且不理会中断，模拟回复刚好在删除对话前后到达 */
-function lateTransport() {
+/**
+ * 假的「回复来源」：几乎马上照演示台词回复，并记下每次收到的资料。
+ * 另外有几个开关，让测试可以安排「失败一次」或「卡住不回」。
+ */
+function fakeReplies() {
+  const calls: ReplyInput[] = [];
+  let failNext = false;
+  let holding = false;
   let release = () => {};
-  const inner = instantTransport();
-  const transport: ChatTransport = {
-    mode: 'mock',
-    async send(request: ChatRequest): Promise<ChatResponse> {
-      await new Promise<void>((resolve) => {
+
+  async function getReply(input: ReplyInput, signal: AbortSignal) {
+    calls.push(input);
+    if (holding) {
+      await new Promise<void>((resolve, reject) => {
         release = resolve;
+        signal.addEventListener('abort', () => reject(new DOMException('', 'AbortError')));
       });
-      return inner.send(request);
+    }
+    // 消息按时间排序：真实的回复一定比用户那句话晚，这里也隔开几毫秒
+    await new Promise((resolve) => setTimeout(resolve, 3));
+    if (failNext) {
+      failNext = false;
+      throw new Error('没拿到回复');
+    }
+    return pickDemoReply(input.characterId, input.messages.at(-1)?.content ?? '');
+  }
+
+  return {
+    getReply,
+    calls,
+    failOnce: () => {
+      failNext = true;
     },
+    /** 之后的回复都卡住，直到 release() 或被中断 */
+    hold: () => {
+      holding = true;
+    },
+    release: () => release(),
   };
-  return { transport, release: () => release() };
 }
 
-async function openStore(transport: ChatTransport = instantTransport(), characterId = 'lijiaying') {
-  const store = createChatStore({ transport, database });
+/** 建立一个接上假回复的 store，并打开角色 */
+async function openStore(replies = fakeReplies(), characterId = 'lijiaying') {
+  const store = createChatStore({ getReply: replies.getReply, database });
   await store.getState().openCharacter(characterId);
-  return store;
+  return { store, replies };
 }
 
-describe('chatStore', () => {
-  it('发送后写入用户消息与完整的回复 JSON，并出现在历史对话里', async () => {
-    const store = await openStore();
+/** 让已经开始的发送先跑到「等回复」那一步 */
+const untilWaiting = (replies: ReturnType<typeof fakeReplies>, count = 1) =>
+  vi.waitFor(() => expect(replies.calls).toHaveLength(count));
+
+describe('chatStore：发送与回复', () => {
+  it('发送后把用户这句话与角色的回复（含情绪、动作、表情）存进浏览器，并出现在历史对话里', async () => {
+    const { store } = await openStore();
 
     await store.getState().send('你好');
 
     const state = store.getState();
     expect(state.status).toBe('ready');
     expect(state.messages.map((message) => message.role)).toEqual(['user', 'assistant']);
-    expect(state.messages[1]?.emotion).toBe('happy');
-    expect(state.messages[1]?.action).toBe('greeting');
-    expect(state.messages[1]?.expression).toBe('smile');
+    expect(state.messages[1]).toMatchObject({
+      emotion: 'happy',
+      action: 'greeting',
+      expression: 'smile',
+    });
     expect(state.conversations).toHaveLength(1);
     expect(state.conversations[0]?.title).toBe('你好');
     expect(await listMessages(state.conversationId ?? '', database)).toHaveLength(2);
   });
 
-  it('请求里带上当前角色', async () => {
-    const requests: ChatRequest[] = [];
-    const store = await openStore(flakyTransport(requests), 'yuchengnuo');
+  it('要回复时带上目前的角色与这段对话的全部消息', async () => {
+    const { store, replies } = await openStore(fakeReplies(), 'yuchengnuo');
 
     await store.getState().send('在吗');
+    await store.getState().send('吃了吗');
 
-    expect(requests[0]?.characterId).toBe('yuchengnuo');
+    expect(replies.calls[1]?.characterId).toBe('yuchengnuo');
+    expect(replies.calls[1]?.messages.map((message) => message.content)).toEqual([
+      '在吗',
+      store.getState().messages[1]?.content,
+      '吃了吗',
+    ]);
   });
 
+  it('连按两次发送只会发出一次', async () => {
+    const { store, replies } = await openStore();
+
+    await Promise.all([store.getState().send('你好'), store.getState().send('你好')]);
+
+    expect(replies.calls).toHaveLength(1);
+    expect(store.getState().conversations).toHaveLength(1);
+    expect(store.getState().messages.map((message) => message.role)).toEqual(['user', 'assistant']);
+  });
+
+  it('停止等待后显示「已停止」；再按重试会拿到回复', async () => {
+    const { store, replies } = await openStore();
+    replies.hold();
+
+    const pending = store.getState().send('你好');
+    await untilWaiting(replies);
+    store.getState().stop();
+    await pending;
+    expect(store.getState().notice).toEqual({ kind: 'stopped', reason: 'aborted' });
+    expect(store.getState().status).toBe('ready');
+
+    const retrying = store.getState().retry();
+    await untilWaiting(replies, 2);
+    replies.release();
+    await retrying;
+    expect(store.getState().messages.map((message) => message.role)).toEqual(['user', 'assistant']);
+  });
+});
+
+describe('chatStore：出错与重试', () => {
+  it('没拿到回复时显示提示；重试不会重复存用户那句话', async () => {
+    const { store, replies } = await openStore();
+    replies.failOnce();
+
+    await store.getState().send('在吗');
+    expect(store.getState().notice).toEqual({ kind: 'error', reason: 'failed' });
+    expect(store.getState().messages).toHaveLength(1);
+
+    await store.getState().retry();
+    expect(store.getState().notice).toBeNull();
+    expect(store.getState().messages.map((message) => message.role)).toEqual(['user', 'assistant']);
+    expect(await database.messages.count()).toBe(2);
+  });
+
+  it('打开最后一句还没回复的对话时，提示可以重试', async () => {
+    const first = await openStore();
+    first.replies.failOnce();
+    await first.store.getState().send('在吗');
+
+    const { store } = await openStore();
+
+    expect(store.getState().notice).toEqual({ kind: 'stopped', reason: 'unanswered' });
+    await store.getState().retry();
+    expect(store.getState().messages.map((message) => message.role)).toEqual(['user', 'assistant']);
+  });
+
+  it('存进浏览器失败时提示，而且不去要回复', async () => {
+    const { store, replies } = await openStore();
+    vi.spyOn(database.conversations, 'add').mockRejectedValueOnce(new Error('存储空间已满'));
+
+    await store.getState().send('你好');
+
+    expect(replies.calls).toHaveLength(0);
+    expect(store.getState().status).toBe('ready');
+    expect(store.getState().notice).toEqual({ kind: 'error', reason: 'save' });
+  });
+});
+
+describe('chatStore：历史对话', () => {
   it('重新打开角色时恢复最近的对话', async () => {
     const first = await openStore();
-    await first.getState().send('你好');
+    await first.store.getState().send('你好');
 
-    const second = await openStore();
+    const { store } = await openStore();
 
-    expect(second.getState().messages).toHaveLength(2);
-    expect(second.getState().conversationId).toBe(first.getState().conversationId);
+    expect(store.getState().messages).toHaveLength(2);
+    expect(store.getState().conversationId).toBe(first.store.getState().conversationId);
   });
 
   it('不同角色的对话互不混在一起', async () => {
-    const store = await openStore();
+    const { store } = await openStore();
     await store.getState().send('你好');
 
     await store.getState().openCharacter('yuchengnuo');
@@ -117,7 +192,7 @@ describe('chatStore', () => {
   });
 
   it('新对话、切换回旧对话', async () => {
-    const store = await openStore();
+    const { store } = await openStore();
     await store.getState().send('第一段');
     const firstId = store.getState().conversationId ?? '';
 
@@ -130,8 +205,8 @@ describe('chatStore', () => {
     expect(store.getState().messages[0]?.content).toBe('第一段');
   });
 
-  it('删除当前对话后回到新对话', async () => {
-    const store = await openStore();
+  it('删除目前的对话后回到新对话，消息一起删除', async () => {
+    const { store } = await openStore();
     await store.getState().send('你好');
     const conversationId = store.getState().conversationId ?? '';
 
@@ -142,92 +217,18 @@ describe('chatStore', () => {
     expect(await listMessages(conversationId, database)).toHaveLength(0);
   });
 
-  it('请求失败时显示提示，重试不会重复写入用户消息', async () => {
-    const store = await openStore(flakyTransport());
-
-    await store.getState().send('在吗');
-    expect(store.getState().notice?.kind).toBe('error');
-    expect(store.getState().messages).toHaveLength(1);
-
-    await store.getState().retry();
-    expect(store.getState().notice).toBeNull();
-    expect(store.getState().messages.map((message) => message.role)).toEqual(['user', 'assistant']);
-  });
-
-  it('停止等待后显示「已停止」', async () => {
-    const store = await openStore(createMockTransport({ delayMs: () => 10_000 }));
+  it('等待回复时删除对话，迟到的回复不会写回浏览器，也不会显示出来', async () => {
+    const { store, replies } = await openStore();
+    replies.hold();
 
     const pending = store.getState().send('你好');
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    store.getState().stop();
-    await pending;
-
-    expect(store.getState().notice?.kind).toBe('stopped');
-    expect(store.getState().status).toBe('ready');
-  });
-
-  it('打开最后一句还没回复的对话时，提示可以重试', async () => {
-    const first = await openStore(flakyTransport());
-    await first.getState().send('在吗');
-
-    const second = await openStore();
-
-    expect(second.getState().notice?.kind).toBe('stopped');
-  });
-
-  it('连按两次发送只会发出一次', async () => {
-    const requests: ChatRequest[] = [];
-    const store = await openStore(recordingTransport(requests));
-
-    await Promise.all([store.getState().send('你好'), store.getState().send('你好')]);
-
-    expect(requests).toHaveLength(1);
-    expect(store.getState().conversations).toHaveLength(1);
-    expect(store.getState().messages.map((message) => message.role)).toEqual(['user', 'assistant']);
-  });
-
-  it('等待回复时删除对话，迟到的回复不会写回本地', async () => {
-    const { transport, release } = lateTransport();
-    const store = await openStore(transport);
-
-    const pending = store.getState().send('你好');
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await untilWaiting(replies);
     await store.getState().deleteConversation(store.getState().conversationId ?? '');
-    release();
+    replies.release();
     await pending;
 
     expect(await database.messages.count()).toBe(0);
     expect(store.getState().conversationId).toBeNull();
     expect(store.getState().notice).toBeNull();
-  });
-
-  it('写入本地失败时提示，而且不发出请求', async () => {
-    const requests: ChatRequest[] = [];
-    const store = await openStore(recordingTransport(requests));
-    vi.spyOn(database.conversations, 'add').mockRejectedValueOnce(new Error('存储空间已满'));
-
-    await store.getState().send('你好');
-
-    expect(requests).toHaveLength(0);
-    expect(store.getState().status).toBe('ready');
-    expect(store.getState().notice).toEqual({ kind: 'error', reason: 'save' });
-  });
-});
-
-describe('buildContext', () => {
-  it('只保留最近 N 条，且只带 role 与 content', () => {
-    const messages = Array.from({ length: 5 }, (_, index) => ({
-      id: `m${index}`,
-      conversationId: 'c',
-      role: index % 2 === 0 ? ('user' as const) : ('assistant' as const),
-      content: `第 ${index} 条`,
-      emotion: 'happy',
-      createdAt: new Date(2026, 0, 1, 0, index).toISOString(),
-    }));
-
-    expect(buildContext(messages, 2)).toEqual([
-      { role: 'assistant', content: '第 3 条' },
-      { role: 'user', content: '第 4 条' },
-    ]);
   });
 });

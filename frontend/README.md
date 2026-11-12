@@ -7,16 +7,18 @@ AnimaVox（心音）引擎的 Web 前端。这一版只做文字对话：语音�
 
 ## 界面布局
 
-以 **2560 × 1440（16:9）** 为设计基准，从左到右四部分：
+以 **2560 × 1440（16:9）** 为设计基准。主页只留中间的对话，其余功能都盖在主页上：
 
-| 区域           | 宽度         | 内容                                                         |
-| -------------- | ------------ | ------------------------------------------------------------ |
-| 菜单栏         | 左 1/4（合计） | 对话、角色、人设、API、设置                                |
-| 侧边列表       | ↑            | 随菜单切换：默认是与当前角色的历史对话                       |
-| 对话区         | 中 2/4       | 消息、输入框                                                 |
-| 角色展示框     | 右 1/4       | 拱形展示框（之后放 Live2D 或立绘）、名字、在线状态           |
+| 部分            | 位置与尺寸                                   | 内容与行为                                                                 |
+| --------------- | -------------------------------------------- | -------------------------------------------------------------------------- |
+| 对话栏          | 水平置中，宽 60vw，上下占满；窄于 800px 时全宽 | 标题、消息、输入框；两侧留白，不加边框                                     |
+| Live2D 预留位置 | 对话栏中间，底部贴齐输入框上缘               | 宽高比 1080 : 1170，高约消息区的 70%；在消息后面一层，透明、无框，不挡点击 |
+| 工具栏          | 屏幕最左边，浮在主页之上（不占版面宽度）     | 平时收起只露出一条窄条；鼠标靠近、键盘 Tab 或触控点窄条就滑出              |
+| 二级页面        | 置中，宽 60vw、高 75vh；窄于 800px 时接近全宽 | 对话、角色、人设、API、设置；主页在后面模糊柔焦，按 ✕ 或 Esc 关闭          |
 
-窄于 1200px 时隐藏展示框；窄于 800px 时只保留菜单栏与对话区。
+- 工具栏：鼠标离开后延迟 300ms 才收起，期间回来就不收；二级页面开着时一直展开。动画只动 transform 与 opacity，系统开启「减少动态效果」时直接切换。
+- 二级页面：页面开着时点工具栏其他项直接切换；在「对话」页点选对话或「新对话」后自动回到聊天，删除对话不关闭。
+- 键盘：二级页面打开时焦点在 ✕，Tab 只在二级页面与工具栏之间循环，关闭后焦点回到打开它的工具栏按钮。
 
 ## 界面语言
 
@@ -83,18 +85,20 @@ npm run dev:frontend
 
 ## 预留给 Phase 2 的位置
 
-- **Live2D / 立绘**：`src/components/stage/CharacterVisual.tsx` 按角色的 `visual.kind` 切换：
-  `placeholder`（现在）、`image`（静态立绘，已可用）、`live2d`（在这里挂载渲染器）。
+- **Live2D**：`src/components/live2d/Live2DSlot.tsx` 是对话栏中间的预留位置，现在不渲染任何东西。
+  之后把渲染器当成 `children` 放进去，参考 `feature/v2-codex-fixes` 分支第二版的实作
+  （`Live2DCanvas.tsx`、`Live2DStage.tsx`、`services/live2d/*`、`utils/live2dExpression.ts`），
+  由回复里的 `emotion` / `expression` 驱动表情。
 - **自定义角色**：`CharacterProfile.origin = 'custom'` 的角色不受锁定；人设、API 面板已按是否锁定分开显示。
 
 ## 目录
 
 ```
 src/
-├── App.tsx                      四栏布局与面板切换
+├── App.tsx                      主页布局（置中的对话栏）与二级页面切换
 ├── config/
 │   ├── app.ts                   通道、后端地址、超时、上下文条数
-│   └── characters.ts            角色注册表（官方 / 自定义、开场白、形象）
+│   └── characters.ts            角色注册表（官方 / 自定义、开场白、建议话题）
 ├── services/chat/
 │   ├── types.ts                 ChatTransport 接口（前后端唯一的接缝）
 │   ├── httpTransport.ts         真实后端
@@ -109,10 +113,11 @@ src/
 ├── db/                          IndexedDB（会话、消息、设置）
 ├── assets/brand/                AnimaVox LOGO（左上角，文字已转曲线）
 └── components/
-    ├── nav/                     最左侧菜单栏
-    ├── sidebar/                 侧边列表：对话记录、角色、人设、API、设置
+    ├── nav/                     最左侧工具栏（平时收起，鼠标靠近才滑出）
+    ├── overlay/                 二级页面外框（模糊背景、✕ / Esc 关闭、焦点管理）
+    ├── sidebar/                 二级页面的内容：对话记录、角色、人设、API、设置
     ├── chat/                    消息列表、气泡、输入框、出错提示、空状态
-    ├── stage/                   右侧拱形展示框与形象
+    ├── live2d/                  Live2D 预留位置（透明、无框）
     └── common/                  头像、图标、下拉选单
 ```
 
@@ -122,10 +127,11 @@ src/
 | -------------------------- | ---------------------------------- | ------------------------------------------- |
 | 开场白、建议话题、简介     | `src/config/characters.ts`         | 对应角色的 `greeting`、`suggestions`、`tagline` |
 | 头像上的字                 | `src/config/characters.ts`         | `monogram`                                  |
-| 展示框里的占位文字         | `src/config/characters.ts`         | `visual` 的 `caption`、`note`               |
-| 换成静态立绘               | `src/config/characters.ts`         | `visual` 改成 `{ kind: 'image', src: '/立绘.png', alt: '…' }`，图片放 `frontend/public/` |
 | 假后端的回复内容           | `src/services/chat/mockReplies.ts` | 每条的文字；`pattern` 是触发关键词          |
-| 展示框的渐变颜色、比例     | `src/styles/index.css`             | `.stage-frame` 的 `background`、`aspect-ratio` |
+| 工具栏的宽度、窄条、感应范围、动画 | `src/styles/index.css`     | `:root` 里的 `--nav-*` 变量                 |
+| 收起前的延迟               | `src/components/nav/NavRail.tsx`   | `NAV_COLLAPSE_DELAY_MS`                     |
+| 二级页面的尺寸             | `src/styles/index.css`             | `.overlay-page`                             |
+| Live2D 预留位置的比例、高度 | `src/styles/index.css`            | `.live2d-slot`                              |
 | 界面上的按钮、标题、提示文字 | `src/i18n/messages/*.ts`           | 三个语言文件的同一个位置都要改             |
 | 主题颜色                   | `tailwind.config.js`               | `colors` 里的色值                           |
 | 整体字号                   | `src/styles/index.css`             | `html { font-size: clamp(...) }`            |

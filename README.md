@@ -132,7 +132,7 @@ Phase 1 只做**文字對話版**，其餘全部移至 Phase 2：
 1.  **雙層架構 (Two-Layer Design)**：開源引擎供任何人自備 Key 使用；李佳尹官方實例 100% 運行於官方 API，確保角色一致性與品質。
 2.  **本機儲存 (Local-First，已實作)**：聊天紀錄保存在瀏覽器 `IndexedDB`。發送時會把最近的對話傳給所連接的後端（預設是瀏覽器內的假後端）；尚無 SQLite 備份。
 3.  **語音可選 (Voice as Optional Layer)**：TTS / STT 為可插拔模組，任一失效不影響文字對話。李佳尹官方版使用專屬訓練音色。
-4.  **Live2D 沉浸渲染（規劃，Phase 2）**：第三版右側已預留角色展示框；之後整合 Live2D，由 AI 返回的 `emotion` 欄位驅動模型表情聯動，口型同步同樣在 Phase 2。
+4.  **Live2D 沉浸渲染（規劃，Phase 2）**：第三版已在對話欄中間預留 Live2D 位置（透明、無框）；之後整合 Live2D，由 AI 返回的 `emotion` 欄位驅動模型表情聯動，口型同步同樣在 Phase 2。
 5.  **多模型自由切換**：相容 OpenAI API 格式（引擎預設 **DeepSeek V4 Pro**，模型 ID `deepseek-v4-pro`），支援在設定頁配置多組 API URL/Key，一鍵切換不掉上下文。
 6.  **金鑰代理（規劃）**：尚無服務端金鑰儲存或加密。第三版前端不持有、不發送任何 API Key，模型由後端決定；使用者自建角色開放後，需要 Key 的廠商必須填寫 API Key。
 
@@ -141,7 +141,7 @@ Phase 1 只做**文字對話版**，其餘全部移至 Phase 2：
 ### 💻 技術棧 (Tech Stack)
 
 **已實作（本分支可運行）**
-*   **Frontend**: React 18 + Vite + TypeScript + Tailwind CSS + Zustand + Dexie.js (IndexedDB)（Live2D 展示框已預留，渲染器於 Phase 2 接入）
+*   **Frontend**: React 18 + Vite + TypeScript + Tailwind CSS + Zustand + Dexie.js (IndexedDB)（Live2D 位置已預留，渲染器於 Phase 2 接入）
 *   **Mock 後端**: Node.js + Fastify + TypeScript（健康檢查與 Mock 對話；正式後端未開工）
 *   **Shared**: Zod（前後端共用 schema，位於 `packages/shared`）
 *   **測試**: Vitest（單元測試）+ Playwright（E2E，1280×720 / 1920×1080 / 2560×1440）
@@ -167,7 +167,10 @@ npm run dev:frontend
 
 ### 界面
 
-以 2560 × 1440（16:9）为设计基准，从左到右：菜单栏 + 与当前角色的历史对话（左 1/4）、对话区（中 2/4）、角色展示框（右 1/4，之后放 Live2D 或立绘）。
+以 2560 × 1440（16:9）为设计基准，主页只有中间的对话栏（宽 60vw，窄于 800px 时全宽），对话栏中间、消息后面预留了 Live2D 的位置（透明、无框）。
+
+- **工具栏**：平时收起在屏幕最左边，只露出一条窄条；鼠标靠近、键盘 Tab 或触控点窄条就滑出。
+- **二级页面**：工具栏的对话、角色、人设、API、设置都打开盖在主页上的二级页面，主页在后面模糊柔焦；按 ✕ 或 Esc 关闭。
 
 - **角色**：李佳尹、羽澄糯为官方角色，人设、模型、形象锁定不可修改；使用者自建角色（自带人设、API、Live2D）为开源引擎功能，即将开放。
 - **界面语言**：「设置」里切换简体中文 / 繁體中文 / English，只影响界面文字，角色台词与聊天内容不转换。
@@ -216,7 +219,7 @@ Web chat/
 ├── frontend/                 # React 18 + Vite + Tailwind（详见 frontend/README.md）
 │   ├── e2e/                  # Playwright 端到端测试
 │   └── src/
-│       ├── components/       # nav / sidebar / chat / stage / common
+│       ├── components/       # nav / overlay / sidebar / chat / live2d / common
 │       ├── config/           # 角色注册表、通道与后端地址
 │       ├── i18n/             # 界面语言（简体 / 繁體 / English）
 │       ├── services/chat/    # ChatTransport：假后端与真实后端
@@ -242,7 +245,7 @@ Web chat/
 
 **已完成（Phase 1 前端 · 第三版：AnimaVox 文字对话版）**
 
-- AnimaVox 四栏界面、官方角色锁定、每个角色独立的历史对话（新建 / 切换 / 删除）
+- AnimaVox 界面（置中的对话栏、自动收起的左侧工具栏、盖在主页上的二级页面、Live2D 预留位置）、官方角色锁定、每个角色独立的历史对话（新建 / 切换 / 删除）
 - 假后端 / 真实后端一键切换，前后端共用 Zod 契约
 - 界面三语（简体 / 繁體 / English）
 - 切换或删除对话时取消正在等的请求；迟到的回复不会显示在别的对话，也不会写回已删除的对话；连按两次只发一次；写入本地失败时提示
